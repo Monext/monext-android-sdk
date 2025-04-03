@@ -1,0 +1,148 @@
+name: Monext Online Android SDK CI/CD Pipeline
+
+# DÉCLENCHEURS - Quand ce pipeline doit s'exécuter
+on:
+  # Se déclenche lors d'un push sur les branches main ou develop
+  push:
+    branches: [ main, develop ]
+    # Se déclenche aussi lors de la création d'un tag commençant par 'v' (ex: v1.0.0)
+    # C'est ce qui déclenchera la publication de votre SDK
+    tags:
+      - 'v*'
+  # Se déclenche lors de l'ouverture ou mise à jour d'une Pull Request
+  pull_request:
+    branches: [ develop ]
+
+# VARIABLES GLOBALES - Utilisées dans tous les jobs
+env:
+  ANDROID_COMPILE_SDK: "34"  # Android 14
+  ANDROID_BUILD_TOOLS: "34.0.0"
+  ANDROID_SDK_TOOLS: "11076708"  # Version des outils de ligne de commande Android
+  JDK_DISTRIBUTION: 'temurin'    # Distribution OpenJDK
+  JDK_VERSION: '21'
+
+jobs:
+  # ============================================
+  # JOB: TESTS UNITAIRES ET INSTRUMENTÉS
+  # ============================================
+  test:
+    name: Run Tests
+    # Machine virtuelle Ubuntu pour exécuter les tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # Récupère le code source depuis GitHub
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 récupère tout l'historique Git
+          # Nécessaire pour que SonarCloud puisse analyser les changements
+          fetch-depth: 0
+
+      # Configure JDK
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JDK_DISTRIBUTION }}
+          java-version: ${{ env.JDK_VERSION }}
+          cache: 'gradle'  # Met en cache les dépendances Gradle pour accélérer les builds
+
+      # Installe le SDK Android nécessaire pour compiler
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
+
+      # Rend le wrapper Gradle exécutable (nécessaire sur Linux)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # ============================================
+      # TESTS UNITAIRES (tests sur la JVM, sans Android)
+      # ============================================
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+        #env:
+          # Injecte la clé API depuis les secrets GitHub
+          # Cette variable sera accessible dans BuildConfig
+         # THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+
+      # Sauvegarde les rapports de tests même si les tests échouent
+      - name: Upload unit test results
+        uses: actions/upload-artifact@v4
+        if: always()  # S'exécute même en cas d'échec
+        with:
+          name: unit-test-results
+          path: '**/build/reports/tests/'
+
+      # ============================================
+      # TESTS Android
+      # ============================================
+      - name: Start emulator and run instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          # Configuration de l'émulateur
+          api-level: 30
+          arch: x86_64
+          profile: Nexus 6
+          avd-name: test
+          # Options pour optimiser l'émulateur en CI (pas d'interface graphique)
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true  # Désactive les animations pour accélérer les tests
+          # Commande à exécuter une fois l'émulateur démarré
+          script: ./gradlew connectedAndroidTest --stacktrace
+        #env:
+          #THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+
+      # Sauvegarde les résultats des tests instrumentés
+      - name: Upload instrumented test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: instrumented-test-results
+          path: '**/build/reports/androidTests/'
+
+  # ============================================
+  # JOB: ANALYSE SONARCLOUD (QUALITÉ DU CODE)
+  # ============================================
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    # Ne s'exécute qu'après le succès des tests
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Historique complet pour l'analyse
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JDK_DISTRIBUTION }}
+          java-version: ${{ env.JDK_VERSION }}
+          cache: 'gradle'
+
+      # Cache pour les packages SonarCloud (accélère l'analyse)
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      # Lance l'analyse SonarCloud
+      - name: Run SonarCloud analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatiquement fourni par GitHub
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew build sonar --info
+
+      # Vérifie que le code respecte les critères de qualité
+      - name: SonarCloud Quality Gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 10  # Timeout après 10 minutes
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+

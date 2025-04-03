@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="payment_methods_selector_header">Pay with</string>
+
+    <string name="wallet_list_header">Preferred payment methods</string>
+    <string name="wallet_list_default_label">Default</string>
+
+    <string name="wallet_item_expiration">Exp. %1$s</string>
+
+    <string name="payment_success_header">Congratulations</string>
+    <string name="payment_success_message">Your payment of %1$s has been received. Your order %2$s is confirmed. Thank you for your order!</string>
+
+    <string name="payment_canceled_message">Your payment has been canceled.</string>
+
+    <string name="token_expired_message">Your payment session has expired.</string>
+
+    <string name="payment_failure_header">We are sorry</string>
+    <string name="payment_failure_title1">Your bank refused the payment of %1$s.</string>
+    <string name="payment_failure_title2">Please change your payment method.</string>
+
+    <string name="button_pay_title">Pay %1$s</string>
+    <string name="button_return_to_app_title">Back to the app</string>
+    <string name="button_retry_title">Retry</string>
+
+    <string name="payment_card_form_field_card">Card number</string>
+    <string name="payment_card_form_field_expiration">Expiry</string>
+    <string name="payment_card_form_field_cvv">CVV</string>
+    <string name="payment_card_form_field_holder">Name on card</string>
+    <string name="payment_card_form_save">I want to save my credit card information for later.</string>
+
+    <string name="payment_method_paypal_message">Click on \"Pay\" to finalize your payment with PayPal.</string>
+    <string name="payment_method_form_save">I want to save my payment information for later.</string>
+
+    <string name="dialog_cvv_title">CVV</string>
+    <string name="dialog_cvv_message">Please enter the security code written on your card. It may have 3 or 4 digits.</string>
+    <string name="dialog_choose_network_title">Info</string>
+    <string name="dialog_choose_network_message">Your card has two different networks. Please choose the one you prefer to use.</string>
+    <string name="dialog_exit_payment_title">Exit payment</string>
+    <string name="dialog_exit_payment_message">You are about to cancel the payment of your order. No amount will be debited from your account.</string>
+    <string name="dialog_exit_payment_confirm">Exit</string>
+    <string name="dialog_exit_payment_dismiss">Stay</string>
+
+    <string name="misc_test_mode" translatable="false">! TEST !\nMODE</string>
+    <string name="misc_payment_method_card">Card</string>
+
+    <string name="validation_error_invalid_card">Invalid card number</string>
+    <string name="validation_error_unknown_card_type">Unknown card type</string>
+    <string name="validation_error_invalid_date">Invalid expiry date</string>
+    <string name="validation_error_invalid_date_format">Invalid format</string>
+    <string name="validation_error_invalid_cvv">Invalid CVV</string>
+
+    <string name="accepted_cards_title">Accepted Cards</string>
+    <string name="payment_overlay_message">Please wait as we contact your bank.</string>
+    <string name="card_network_selector_title">Please select your preferred card network.</string>
+    <string name="compliancy_notice_message">We are fully compliant with the payment card industry data security standards.</string>
+
+</resources>

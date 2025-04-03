@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_methods_selector_header">Payer avec</string>
+    <string name="validation_error_invalid_card">Numéro de carte non valide</string>
+    <string name="validation_error_unknown_card_type">Type de carte inconnu</string>
+    <string name="validation_error_invalid_date">Date d\'expiration non valide</string>
+    <string name="validation_error_invalid_date_format">Format non valide</string>
+    <string name="validation_error_invalid_cvv">CVV non valide</string>
+    <string name="accepted_cards_title">Cartes acceptées</string>
+    <string name="payment_failure_title1">Votre banque a rejeté le paiement de %1$s.</string>
+    <string name="payment_failure_title2">Veuillez sélectionner un autre moyen de paiement.</string>
+    <string name="button_pay_title">Payer %1$s</string>
+    <string name="button_return_to_app_title">Retour sur l\'application</string>
+    <string name="misc_payment_method_card">Carte</string>
+    <string name="payment_card_form_field_card">Numéro de carte</string>
+    <string name="payment_card_form_field_holder">Titulaire de la carte</string>
+    <string name="payment_card_form_save">Enregistrer mes informations de paiement.</string>
+    <string name="payment_method_paypal_message">Cliquer sur \"Payer\" pour finaliser votre paiement Paypal</string>
+    <string name="wallet_item_expiration">Exp. %1$s</string>
+    <string name="payment_success_header">Félicitations</string>
+    <string name="payment_card_form_field_expiration">Expiration</string>
+    <string name="payment_card_form_field_cvv">CVV</string>
+    <string name="payment_method_form_save">Enregistrer mes informations de paiement.</string>
+    <string name="dialog_cvv_title">CVV</string>
+    <string name="wallet_list_header">Moyens de paiement préférés</string>
+    <string name="wallet_list_default_label">Défaut</string>
+    <string name="dialog_exit_payment_message">Vous êtes sur le point d\'annuler votre paiement. Aucun montant ne sera débité de votre compte.</string>
+    <string name="dialog_exit_payment_confirm">Annuler</string>
+    <string name="dialog_choose_network_message">Votre carte supporte deux réseaux, et vous pouvez choisir celui que vous préférez pour ce paiement</string>
+    <string name="dialog_exit_payment_title">Annuler le paiement</string>
+    <string name="dialog_cvv_message">Veuillez saisir le cryptogramme visuel imprimé sur votre carte bancaire.</string>
+    <string name="dialog_choose_network_title">Info</string>
+    <string name="payment_overlay_message">Veuillez patienter, nous interrogeons votre banque.</string>
+    <string name="card_network_selector_title">Sélectionnez votre réseau préféré.</string>
+    <string name="dialog_exit_payment_dismiss">Rester</string>
+    <string name="token_expired_message">Votre session de paiement est expirée.</string>
+    <string name="payment_failure_header">Nous sommes désolés</string>
+    <string name="compliancy_notice_message">Nous sommes certifiés PCI-DSS.</string>
+    <string name="payment_success_message">Votre paiement de %1$s a été validé. Votre commande %2$s est validée. Merci pour votre commande !</string>
+    <string name="payment_canceled_message">Votre paiement a été annulé.</string>
+</resources>
