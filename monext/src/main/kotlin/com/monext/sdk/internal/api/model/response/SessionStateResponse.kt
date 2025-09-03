@@ -57,6 +57,12 @@ internal enum class SessionStateType {
             // TODO: Determine all possible states
             else -> null
         }
+
+    fun isFinalState() : Boolean =
+        when(this) {
+            PAYMENT_SUCCESS, PAYMENT_FAILURE, PAYMENT_CANCELED, TOKEN_EXPIRED -> true
+            else -> false
+        }
 }
 
 internal object SessionStateTypeSerializer: KSerializer<SessionStateType> {

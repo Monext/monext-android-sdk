@@ -1,16 +1,10 @@
 package com.monext.sdkexample
 
-import android.icu.text.SimpleDateFormat
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.monext.sdk.Appearance
-import java.time.LocalDate
-import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+
 
 class MainActivity: ComponentActivity() {
 
