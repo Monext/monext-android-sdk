@@ -12,6 +12,8 @@ import com.monext.sdk.internal.data.sessionstate.RedirectionData
 import com.monext.sdk.internal.api.model.SessionInfo
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
+import com.monext.sdk.internal.data.sessionstate.FailureMessage
+import com.monext.sdk.internal.data.sessionstate.PaymentFailure
 import com.monext.sdk.internal.data.sessionstate.Ticket
 import com.monext.sdk.internal.data.sessionstate.Wallet
 
@@ -267,6 +269,10 @@ internal interface PreviewSamples {
             displayTicket = true,
             fragmented = false
         )
+        val paymentFailure = PaymentFailure(
+            message = FailureMessage(true, "Paiement refusé", "ERROR"),
+            selectedCardCode="CB",
+            selectedContractNumber = "CB")
 
         val sessionStateSuccess = SessionState(
             token = "fake_token",
@@ -285,6 +291,35 @@ internal interface PreviewSamples {
             paymentSuccess = paymentSuccess,
             paymentFailure = null
         )
+
+        fun buildSessionState(automaticRedirect : Boolean, type: SessionStateType) : SessionState {
+
+            var paymentSuccessToUse : PaymentSuccess? = null
+            if (type.equals(SessionStateType.PAYMENT_SUCCESS)) {
+                paymentSuccessToUse = paymentSuccess
+            }
+            val paymentFailureToUse: PaymentFailure? = when(type) {
+                SessionStateType.PAYMENT_FAILURE, SessionStateType.TOKEN_EXPIRED -> paymentFailure
+                else -> null;
+            }
+
+            return SessionState(
+                token = "fake_token",
+                type = type,
+                creationDate = "Tue Mar 25 12:33:22 CET 2025",
+                cancelUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+                pointOfSale = "POS_Fake",
+                language = "en",
+                returnUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+                automaticRedirectAtSessionsEnd = automaticRedirect,
+                info = sessionInfo,
+                pointOfSaleAddress = posAddress,
+                isSandbox = true,
+                paymentMethodsList = null,
+                paymentRedirectNoResponse = null,
+                paymentSuccess = paymentSuccessToUse,
+                paymentFailure = paymentFailureToUse)
+        }
 
         val paymentRedirectNoResponse = PaymentRedirectNoResponse(
             cardCode = PaymentMethodCardCode.CB,

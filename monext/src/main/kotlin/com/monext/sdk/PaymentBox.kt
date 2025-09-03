@@ -39,10 +39,11 @@ fun PaymentBox(
 
         clickableContent(onClick)
 
-        PaymentSheet(showPaymentSheet, sessionToken ?: "", sdkContext) { result ->
-            showPaymentSheet = false
-            onResult(result)
-        }
+        PaymentSheet(isShowing = showPaymentSheet,
+            sessionToken = sessionToken ?: "",
+            sdkContext = sdkContext,
+            onResult = onResult,
+            onIsShowingChange = { showPaymentSheet = it })
     }
 }
 

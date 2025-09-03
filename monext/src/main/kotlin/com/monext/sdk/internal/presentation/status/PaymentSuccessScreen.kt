@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,8 @@ internal fun PaymentSuccessScreen(info: SessionInfo, successData: PaymentSuccess
             Text(
                 stringResource(R.string.payment_success_header),
                 style = theme.baseTextStyle.bold().s24()
-                    .foreground(theme.onBackgroundColor)
+                    .foreground(theme.onBackgroundColor),
+                modifier = Modifier.testTag("success_title")
             )
 
             Text(
@@ -67,8 +69,10 @@ internal fun PaymentSuccessScreen(info: SessionInfo, successData: PaymentSuccess
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    for (ticket in successData.ticket) {
-                        TicketItem(ticket)
+                    if (successData.ticket != null) {
+                        for (ticket in successData.ticket) {
+                            TicketItem(ticket)
+                        }
                     }
                 }
             }

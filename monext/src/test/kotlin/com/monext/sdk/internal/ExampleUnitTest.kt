@@ -1,4 +1,4 @@
-package com.monext.sdk
+package com.monext.sdk.internal
 
 import com.monext.sdk.internal.ext.passesLuhnCheck
 import org.junit.jupiter.api.Assertions.assertFalse

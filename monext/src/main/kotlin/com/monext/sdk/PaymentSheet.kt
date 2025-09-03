@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -55,7 +56,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKContext, onResult: (PaymentResult) -> Unit) {
+fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKContext, onResult: (PaymentResult) -> Unit, onIsShowingChange: ((Boolean) -> Unit)? = null) {
 
     if (isShowing) {
 
@@ -74,21 +75,29 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
             }
         )
 
-        val onResultWrapper: (PaymentResult) -> Unit = { r ->
-            viewModel.clearSession()
-            onResult(r)
+        val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
+        val scope = rememberCoroutineScope()
+
+        val isShowingChangeWrapper : ((Boolean) -> Unit) =  {
+            scope.launch {
+                sheetState.hide()
+                viewModel.clearSession()
+                if (!sheetState.isVisible) {
+                    onIsShowingChange?.invoke(false)
+                }
+            }
         }
 
         val sheetRadius = 8.dp
         ModalBottomSheet(
             onDismissRequest = {
-                onResultWrapper(
+                onResult(
                     PaymentResult.SheetDismissed(
                         viewModel.sessionState.value?.type?.toTransactionState()
                     )
                 )
             },
-            modifier = Modifier.statusBarsPadding(),
+            modifier = Modifier.statusBarsPadding().testTag("payment_bottom_sheet"),
             sheetState = sheetState,
             shape = RoundedCornerShape(
 //                topStart = sdkContext.appearance.cardRadius,
@@ -110,8 +119,6 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                 viewModel.initializeSessionState(sessionToken)
             }
 
-            val scope = rememberCoroutineScope()
-            val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
             val sessionLoading by viewModel.sessionLoading.collectAsStateWithLifecycle()
             val canPayGooglePay by viewModel.canPayGooglePay.collectAsStateWithLifecycle()
             var showingOverlay by remember { mutableStateOf(PaymentOverlayToggle.off()) }
@@ -139,7 +146,6 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                     }
                 }
             }
-
             CompositionLocalProvider(
                 LocalAppearance provides sdkContext.appearance,
                 LocalEnvironment provides sdkContext.environment,
@@ -155,11 +161,14 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                                 sheetState.hide()
                             }.invokeOnCompletion {
 //                                if (!sheetState.isVisible) {
-                                onResultWrapper(
+                                onResult(
                                     PaymentResult.SheetDismissed(
                                         viewModel.sessionState.value?.type?.toTransactionState()
                                     )
                                 )
+                                if (!sheetState.isVisible) {
+                                    onIsShowingChange?.invoke(false)
+                                }
 //                                }
                             }
                         }
@@ -184,7 +193,8 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                             },
                             onRedirectionComplete = { viewModel.updateSessionState(sessionToken) },
                             onRetry = { /* TODO: implement RETRY */ },
-                            onResult = onResultWrapper
+                            onResult = onResult,
+                            onIsShowingChange = isShowingChangeWrapper
                         )
                     }
 
@@ -228,8 +238,7 @@ internal fun PaymentSheetPreview() {
             }
         }
 
-        PaymentSheet(showSheet, "", MnxtSDKContext(MnxtEnvironment.Sandbox)) {
-            showSheet = false
-        }
+        PaymentSheet(showSheet, "", MnxtSDKContext(MnxtEnvironment.Sandbox), {})
+        {showSheet = it}
     }
 }

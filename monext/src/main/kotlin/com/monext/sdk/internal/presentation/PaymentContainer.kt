@@ -2,6 +2,8 @@ package com.monext.sdk.internal.presentation
 
 import androidx.compose.runtime.Composable
 import com.monext.sdk.PaymentResult
+import com.monext.sdk.PaymentResult.PaymentCompleted
+import com.monext.sdk.PaymentResult.TransactionState
 import com.monext.sdk.internal.data.FormData
 import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
@@ -33,11 +35,38 @@ internal fun PaymentContainer(
     paymentMethodsScreen: @Composable (PaymentMethodsList, SessionInfo) -> Unit,
     onRedirectionComplete: () -> Unit,
     onRetry: () -> Unit,
-    onResult: (PaymentResult) -> Unit
+    onResult: (PaymentResult) -> Unit,
+    onIsShowingChange: ((Boolean) -> Unit)? = null
 ) {
 
-    when (sessionState?.type) {
+    if (sessionState?.type?.isFinalState() == true) {
+        when(sessionState.type) {
+            SessionStateType.PAYMENT_SUCCESS -> onResult(
+                PaymentCompleted(
+                    TransactionState.PAYMENT_SUCCESS)
+            )
+            SessionStateType.PAYMENT_FAILURE -> onResult(
+                PaymentCompleted(
+                    TransactionState.PAYMENT_FAILURE)
+            )
+            SessionStateType.PAYMENT_CANCELED -> onResult(
+                PaymentCompleted(
+                    TransactionState.PAYMENT_CANCELED)
+            )
+            SessionStateType.TOKEN_EXPIRED -> onResult(
+                PaymentCompleted(
+                    TransactionState.TOKEN_EXPIRED)
+            )
+            else -> {}
+        }
+        if (sessionState.automaticRedirectAtSessionsEnd == true) {
+            onIsShowingChange?.invoke(false)
+            return
+        }
+    }
 
+
+    when (sessionState?.type) {
         SessionStateType.PAYMENT_METHODS_LIST -> {
             sessionState.info?.let { info ->
                 sessionState.paymentMethodsList?.let { list ->
@@ -57,43 +86,24 @@ internal fun PaymentContainer(
         SessionStateType.PAYMENT_SUCCESS -> {
             sessionState.info?.let { info ->
                 sessionState.paymentSuccess?.let { success ->
-                    PaymentSuccessScreen(info, success) {
-                        onResult(
-                            PaymentResult.PaymentCompleted(
-                                PaymentResult.TransactionState.PAYMENT_SUCCESS
-                            )
-                        )
-                    }
+                    PaymentSuccessScreen(info, success) { onIsShowingChange?.invoke(false) }
                 }
             } ?: LoadingSection()
         }
 
-        SessionStateType.PAYMENT_FAILURE -> PaymentFailureScreen(
-            sessionState.info?.formattedAmount ?: "",
-            onRetry = onRetry,
-            onExit = {
-                onResult(
-                    PaymentResult.PaymentCompleted(
-                        PaymentResult.TransactionState.PAYMENT_FAILURE
-                    )
-                )
-            }
-        )
-
-        SessionStateType.PAYMENT_CANCELED -> PaymentCanceledScreen {
-            onResult(
-                PaymentResult.PaymentCompleted(
-                    PaymentResult.TransactionState.PAYMENT_CANCELED
-                )
-            )
+        SessionStateType.PAYMENT_FAILURE -> {
+            PaymentFailureScreen(
+                    sessionState.info?.formattedAmount ?: "",
+                    onRetry = onRetry,
+                    onExit = { onIsShowingChange?.invoke(false) })
         }
 
-        SessionStateType.TOKEN_EXPIRED -> TokenExpiredScreen {
-            onResult(
-                PaymentResult.PaymentCompleted(
-                    PaymentResult.TransactionState.TOKEN_EXPIRED
-                )
-            )
+        SessionStateType.PAYMENT_CANCELED -> {
+            PaymentCanceledScreen { onIsShowingChange?.invoke(false) }
+        }
+
+        SessionStateType.TOKEN_EXPIRED -> {
+            TokenExpiredScreen { onIsShowingChange?.invoke(false) }
         }
 
         else -> LoadingSection()

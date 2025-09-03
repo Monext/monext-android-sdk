@@ -1,5 +1,6 @@
-package com.monext.sdk
+package com.monext.sdk.internal
 
+import com.monext.sdk.MnxtEnvironment
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
