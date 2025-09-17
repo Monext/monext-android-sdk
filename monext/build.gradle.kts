@@ -38,6 +38,8 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
+            enableUnitTestCoverage = true       // Pour les tests unitaires
+            enableAndroidTestCoverage = true    // Pour les tests d'instrumentation
         }
 
         // Configuration release avec obfuscation
@@ -48,6 +50,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Pas de coverage en release
+            enableUnitTestCoverage = false
+            enableAndroidTestCoverage = false
 
             //  Signature pour les releases (CI/CD uniquement)
             if (System.getenv("KEYSTORE_PATH") != null) {
@@ -59,6 +64,19 @@ android {
                 }
             }
         }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                // N'exécute les tests unitaires qu'en debug
+                it.enabled = it.name.contains("Debug")
+            }
+        }
+
+        // Configuration pour les AndroidTests
+        animationsDisabled = true  // Désactive les animations pour accélérer
     }
 
     compileOptions {
@@ -110,6 +128,13 @@ android {
 //            withSourcesJar()
 //            withJavadocJar()
         }
+    }
+}
+
+// Désactive explicitement les tests Release
+tasks {
+    matching { it.name == "testReleaseUnitTest" }.configureEach {
+        enabled = false
     }
 }
 
