@@ -111,6 +111,19 @@ android {
 //            withJavadocJar()
         }
     }
+
+    testOptions {
+        unitTests {
+            all{ test ->
+                if (test.name.contains("Release")) {
+                    // Exclure des tests spécifiques pour release
+                    test.exclude("**/internal/**")
+                }
+            }
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 // Fonction pour récupérer la clé API de manière sécurisée
@@ -236,8 +249,8 @@ sonar {
         property("sonar.projectKey", "Monext_monext-android-sdk")
         property("sonar.organization", "monext")
         property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.sources", "src/main/java,src/main/kotlin")
-        property("sonar.tests", "src/test/java,src/androidTest/java")
+        property("sonar.sources", "src/main/kotlin")
+        property("sonar.tests", "src/test/kotlin,src/androidTest/kotlin")
         property("sonar.java.coveragePlugin", "jacoco")
         property("sonar.coverage.jacoco.xmlReportPaths", "**/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
@@ -355,6 +368,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.slf4j.api)
     implementation(libs.play.services.wallet)
+    implementation(libs.androidx.runtime)
+    implementation(libs.androidx.appcompat)
 
     // !! Attention la Lib Netcetera 2.5.3.0 est mise en Bundle du SDK pour etre buildée avec (il y a le jar et les dossiers 'jnilibs', 'res')
     // Voir la documentation : https://3dss.netcetera.com/3dssdk/doc/2.25.0/android-integration
@@ -372,4 +387,5 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.ui.test.junit4.android)
 }
