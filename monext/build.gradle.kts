@@ -107,21 +107,19 @@ android {
     publishing {
         // Configure ce qu'Android doit exposer comme composants => Prépare le variant 'release' pour la publication
         singleVariant("release") {
-//            withSourcesJar()
-//            withJavadocJar()
         }
     }
 
     testOptions {
         unitTests {
-            all{ test ->
-                if (test.name.contains("Release")) {
-                    // Exclure des tests spécifiques pour release
-                    test.exclude("**/internal/**")
-                }
+            all { test ->
+                // Désactive TOUS les tests unitaires pour le variant Release
+                test.enabled = !test.name.contains("Release")
             }
+
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            animationsDisabled = true  // Désactive les animations pour accélérer
         }
     }
 }
