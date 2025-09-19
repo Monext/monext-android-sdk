@@ -38,6 +38,8 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
         }
 
         // Configuration release avec obfuscation
@@ -48,6 +50,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            enableUnitTestCoverage = false
+            enableAndroidTestCoverage = false
 
             //  Signature pour les releases (CI/CD uniquement)
             if (System.getenv("KEYSTORE_PATH") != null) {
@@ -72,9 +76,9 @@ android {
 
     buildFeatures {
         compose = true
-        // AJOUT : Active BuildConfig
         buildConfig = true
     }
+
     sourceSets {
         getByName("main") {
             jniLibs {
@@ -87,12 +91,10 @@ android {
     lint {
         abortOnError = false
         checkReleaseBuilds = true
-        // Génère un rapport HTML
         htmlReport = true
-        htmlOutput = file("$buildDir/reports/lint/lint-results.html")
-        // Génère un rapport XML pour SonarCloud
+        htmlOutput = layout.buildDirectory.file("reports/lint/lint-results.html").get().asFile
         xmlReport = true
-        xmlOutput = file("$buildDir/reports/lint/lint-results.xml")
+        xmlOutput = layout.buildDirectory.file("reports/lint/lint-results.xml").get().asFile
     }
 
     // Options de packaging
@@ -106,8 +108,7 @@ android {
 
     publishing {
         // Configure ce qu'Android doit exposer comme composants => Prépare le variant 'release' pour la publication
-        singleVariant("release") {
-        }
+        singleVariant("release")
     }
 
     testOptions {
@@ -119,8 +120,8 @@ android {
 
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
-            animationsDisabled = true  // Désactive les animations pour accélérer
         }
+        animationsDisabled = true  // Désactive les animations pour accélérer
     }
 }
 
@@ -245,16 +246,19 @@ signing {
 sonar {
     properties {
         property("sonar.projectKey", "Monext_monext-android-sdk")
+        property("sonar.projectName", "monext-android-sdk")
         property("sonar.organization", "monext")
         property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.sources", "src/main/kotlin")
-        property("sonar.tests", "src/test/kotlin,src/androidTest/kotlin")
-        property("sonar.java.coveragePlugin", "jacoco")
-        property("sonar.coverage.jacoco.xmlReportPaths", "**/build/reports/jacoco/test/jacocoTestReport.xml")
-        property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
-        property("sonar.androidLint.reportPaths", "build/reports/lint/lint-results.xml")
+        property("sonar.tests", "src/test/kotlin")
+        property("sonar.java.binaries", layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile.absolutePath)
+        property("sonar.coverage.jacoco.xmlReportPaths",
+            layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml").get().asFile.absolutePath)
+        property("sonar.androidLint.reportPaths",
+            layout.buildDirectory.file("reports/lint/lint-results.xml").get().asFile.absolutePath)
+        property("sonar.language", "kotlin")
+        property("sonar.kotlin.file.suffixes", ".kt,.kts")
 
-        // Exclusions pour ne pas analyser les fichiers générés
         property("sonar.exclusions",
             "**/BuildConfig.java," +
                     "**/*Test*.java," +
@@ -296,6 +300,10 @@ tasks {
             documentedVisibilities.set(setOf(Visibility.PUBLIC))
         }
     }
+
+    named("sonar") {
+        dependsOn("jacocoTestReport")
+    }
 }
 
 // Configuration des tests avec coverage
@@ -305,23 +313,17 @@ tasks.withType<Test> {
         events("passed", "skipped", "failed")
         showStandardStreams = true
     }
-
-    // Active le coverage avec Jacoco
-    configure<JacocoTaskExtension> {
-        isIncludeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*")
-    }
 }
 
-// Jacoco pour le coverage
 jacoco {
     toolVersion = "0.8.11"
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {
-    dependsOn("test")
+    dependsOn("testDebugUnitTest")
 
     reports {
+        xml.required.set(true)
         xml.required.set(true)  // Pour SonarCloud
         html.required.set(true)
         csv.required.set(false)
@@ -329,24 +331,29 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     val fileFilter = listOf(
         "**/R.class",
-        "**/R\$*.class",
+        "**/R$*.class",
         "**/BuildConfig.*",
         "**/Manifest*.*",
-        "**/*Test*.*"
+        "**/*Test*.*",
+        "**/Enum$*.class",
+        "**/*\$Lambda$*.*",
+        "**/*\$inlined$*.*"
     )
 
-    classDirectories.setFrom(
-        fileTree(mapOf(
-            "dir" to "$buildDir/intermediates/javac/debug",
-            "excludes" to fileFilter
-        ))
-    )
+    val debugTree = fileTree(mapOf(
+        "dir" to layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile,
+        "excludes" to fileFilter
+    ))
 
-    sourceDirectories.setFrom("$projectDir/src/main/java", "$projectDir/src/main/kotlin")
-    executionData.setFrom(fileTree(mapOf(
-        "dir" to buildDir,
-        "includes" to listOf("**/*.exec", "**/*.ec")
-    )))
+    classDirectories.setFrom(debugTree)
+    sourceDirectories.setFrom("${projectDir}/src/main/kotlin")
+
+    executionData.setFrom(
+        fileTree(layout.buildDirectory.get().asFile) {
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+            include("jacoco/testDebugUnitTest.exec")
+        }
+    )
 }
 
 dependencies {
@@ -379,7 +386,6 @@ dependencies {
     testImplementation(libs.io.mockk)
     testImplementation(libs.jetbrains.kotlinx.test)
     testImplementation(libs.slf4j.api)
-
 
     debugImplementation(libs.ui.tooling)
 

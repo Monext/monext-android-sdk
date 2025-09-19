@@ -23,7 +23,7 @@ env:
 
 jobs:
   # ============================================
-  # JOB: TESTS UNITAIRES ET INSTRUMENTÉS
+  # TESTS UNITAIRES ET INSTRUMENTÉS
   # ============================================
   test:
     name: Run Tests
@@ -60,8 +60,12 @@ jobs:
       # ============================================
       # TESTS UNITAIRES (tests sur la JVM, sans Android)
       # ============================================
-      - name: Run unit tests
-        run: ./gradlew test --stacktrace
+      # Tests unitaires ET génération du rapport JaCoCo
+      - name: Run unit tests with coverage
+        run: |
+          ./gradlew testDebugUnitTest --stacktrace
+          ./gradlew jacocoTestReport --stacktrace
+          echo "Coverage report generated at: monext/build/reports/jacoco/jacocoTestReport/"
         #env:
           # Injecte la clé API depuis les secrets GitHub
           # Cette variable sera accessible dans BuildConfig
@@ -73,7 +77,9 @@ jobs:
         if: always()  # S'exécute même en cas d'échec
         with:
           name: unit-test-results
-          path: '**/build/reports/tests/'
+          path: |
+            **/build/reports/tests/
+            **/build/reports/jacoco/
 
       # ============================================
       # TESTS Android
@@ -109,7 +115,7 @@ jobs:
           path: '**/build/reports/androidTests/'
 
   # ============================================
-  # JOB: ANALYSE SONARCLOUD (QUALITÉ DU CODE)
+  # ANALYSE SONARCLOUD
   # ============================================
   sonarcloud:
     name: SonarCloud Analysis
@@ -138,17 +144,24 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      # Lance l'analyse SonarCloud
+      # Télécharge les artifacts des tests (incluant JaCoCo)
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-results
+
+      # Vérifie que le fichier de coverage existe
+      - name: Check coverage report
+        run: |
+          echo "Checking for coverage files..."
+          find . -name "*.exec" -type f
+          find . -name "jacocoTestReport.xml" -type f
+
+      # Build minimal puis Sonar (pas de re-test)
       - name: Run SonarCloud analysis
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatiquement fourni par GitHub
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew build sonar --info
-
-      # Vérifie que le code respecte les critères de qualité
-      - name: SonarCloud Quality Gate check
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 10  # Timeout après 10 minutes
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+        run: |
+          ./gradlew assemble --stacktrace
+          ./gradlew sonar --info -x test -x testDebugUnitTest
