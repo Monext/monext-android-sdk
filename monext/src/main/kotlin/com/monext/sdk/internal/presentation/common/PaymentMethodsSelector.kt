@@ -56,6 +56,7 @@ internal fun PaymentMethodsSelector(
 
             PaymentMethodChip(
                 selectedPaymentMethod.cardCode,
+                selectedPaymentMethod.data,
                 isExpanded = true,
                 showsBack = paymentMethods.size > 1,
                 Modifier
@@ -75,6 +76,7 @@ internal fun PaymentMethodsSelector(
                 items(paymentMethods) {
                     PaymentMethodChip(
                         it.cardCode,
+                        it.data,
                         isExpanded = false,
                         showsBack = false,
                         Modifier

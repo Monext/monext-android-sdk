@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.internal.ext.foreground
 import com.monext.sdk.internal.ext.s14
@@ -33,6 +34,7 @@ internal fun SaveCardCheckbox(label: String, saveCard: Boolean, onSaveCardChecke
 
         Checkbox(
             checked = saveCard,
+            modifier = Modifier.testTag("saveCardCheckbox"),
             onCheckedChange = onSaveCardChecked,
             colors = CheckboxDefaults.colors().copy(
                 checkedCheckmarkColor = theme.onSecondaryColor,

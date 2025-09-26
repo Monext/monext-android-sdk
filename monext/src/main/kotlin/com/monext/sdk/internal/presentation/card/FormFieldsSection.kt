@@ -93,7 +93,7 @@ internal fun FormFieldsSection(cards: PaymentMethod.Cards, onFormValidated: (For
                     cards.paymentMethods.mapNotNull { paymentMethod ->
                         paymentMethod.cardCode?.let { cardCode ->
                             paymentMethod.data?.contractNumber?.let { contractNumber ->
-                                HandledContract(cardCode.name, contractNumber)
+                                HandledContract(cardCode, contractNumber)
                             }
                         }
                     }

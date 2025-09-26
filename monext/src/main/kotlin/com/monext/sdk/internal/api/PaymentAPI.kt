@@ -8,7 +8,6 @@ import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
 import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.data.CardNetwork
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.exception.NetworkError
 import com.monext.sdk.internal.service.Logger
 import com.monext.sdk.internal.threeds.model.AuthenticationResponse
@@ -273,9 +272,9 @@ internal class PaymentAPIImpl(
 
 @Serializable
 internal data class AvailableCardNetworksResponse(
-    val alternativeNetwork: PaymentMethodCardCode?,
+    val alternativeNetwork: String?,
     val alternativeNetworkCode: String?,
-    val defaultNetwork: PaymentMethodCardCode?,
+    val defaultNetwork: String?,
     val defaultNetworkCode: String?,
     val selectedContractNumber: String?
 ) {

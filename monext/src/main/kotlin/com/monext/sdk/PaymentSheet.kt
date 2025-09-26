@@ -40,7 +40,6 @@ import com.google.android.gms.wallet.contract.TaskResultContracts
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.SessionInfo
 import com.monext.sdk.internal.data.LocalSessionStateRepo
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
 import com.monext.sdk.internal.presentation.PaymentContainer
 import com.monext.sdk.internal.presentation.SessionStateViewModel
@@ -211,15 +210,15 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
 
 internal data class PaymentOverlayToggle(
     val showPaymentOverlay: Boolean,
-    val paymentMethodCardCode: PaymentMethodCardCode?
+    val paymentMethodCardCode: String?
 ) {
     companion object {
         /**
          * Objet pour persister le dernier cardCode / network sélectionné
          */
-        private var selectedCardCode:PaymentMethodCardCode? = null
+        private var selectedCardCode:String? = null
 
-        fun on(cardCode: PaymentMethodCardCode?): PaymentOverlayToggle {
+        fun on(cardCode: String?): PaymentOverlayToggle {
             // On persiste le dernier cardCode sélectionné
             selectedCardCode = cardCode;
             return PaymentOverlayToggle(true, cardCode)

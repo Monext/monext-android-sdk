@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class PaymentRedirectNoResponse(
-    val cardCode: PaymentMethodCardCode,
+    val cardCode: String,
     val contractNumber: String,
     val redirectionData: RedirectionData,
     val walletCardIndex: Int?
@@ -21,5 +21,5 @@ internal data class RedirectionData(
     val requestType: String,
     val requestUrl: String,
     val timeoutInMs: Int,
-    val requestFields: Map<String, String>
+    val requestFields: Map<String, String>?
 )

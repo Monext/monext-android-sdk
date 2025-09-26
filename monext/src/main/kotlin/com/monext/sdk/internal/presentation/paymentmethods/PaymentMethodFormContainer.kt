@@ -13,20 +13,15 @@ import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.presentation.card.CardForm
 
 @Composable
-internal fun PaymentMethodFormContainer(paymentMethod: PaymentMethod, onFormValidated: (FormData?) -> Unit, modifier: Modifier = Modifier) {
+internal fun PaymentMethodFormContainer(paymentMethod: PaymentMethod?, onFormValidated: (FormData?) -> Unit, modifier: Modifier = Modifier) {
 
     val theme = LocalAppearance.current
 
     Box(modifier.background(theme.backgroundColor).padding(16.dp)) {
         when (paymentMethod) {
             is PaymentMethod.Cards -> CardForm(paymentMethod, onFormValidated)
-            is PaymentMethod.PayPal -> PayPalForm(paymentMethod, onFormValidated)
-
-            is PaymentMethod.Ideal -> UnimplementedPaymentMethod()
-
-            is PaymentMethod.GooglePay,
-            is PaymentMethod.CB, is PaymentMethod.Amex, is PaymentMethod.MCVisa,
-            is PaymentMethod.Unsupported -> UnsupportedPaymentMethod()
+            is PaymentMethod.AlternativePaymentMethod -> AlternativePaymentMethodForm(paymentMethod, onFormValidated)
+            else -> UnimplementedPaymentMethod()
         }
     }
 }
@@ -34,9 +29,4 @@ internal fun PaymentMethodFormContainer(paymentMethod: PaymentMethod, onFormVali
 @Composable
 internal fun UnimplementedPaymentMethod() {
     Text("Selected payment method not implemented.")
-}
-
-@Composable
-internal fun UnsupportedPaymentMethod() {
-    Text("Selected payment method form not available.")
 }

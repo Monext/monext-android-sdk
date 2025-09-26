@@ -107,6 +107,7 @@ internal fun PaymentMethodsScreen(
 
         PayButtonsContainer(
             paymentInfo.formattedAmount,
+            selectedPaymentMethod = selectedPaymentMethod,
             canPay = canPay,
             isLoading = sessionLoading,
             showsGooglePay = showsGooglePay,

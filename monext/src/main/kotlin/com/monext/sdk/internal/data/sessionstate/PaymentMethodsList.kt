@@ -27,7 +27,6 @@ internal data class PaymentMethodsList(
 
             for (data in paymentMethodsData) {
                 PaymentMethod.fromData(data)?.let {
-                    if (it is PaymentMethod.Unsupported) return@let
                     if (it.isCard) { cards.add(it) }
                     else { group.add(it) }
                 }
@@ -57,7 +56,7 @@ internal data class PaymentMethodData(
     - IDEAL
     - etc.
      */
-    val cardCode: PaymentMethodCardCode?,
+    val cardCode: String?,
 
 //    val confirm: List<FormOption>?,
 
@@ -68,7 +67,11 @@ internal data class PaymentMethodData(
 
     val hasForm: Boolean?,
 
+    val form: PaymentForm?,
+
     val hasLogo: Boolean?,
+
+    val logo: Logo?,
 
     val isIsolated: Boolean?,
 
@@ -84,6 +87,25 @@ internal data class PaymentMethodData(
     val shouldBeInTopPosition: Boolean?,
 
     val state: String?
+) : Parcelable
+
+@Parcelize
+@Serializable
+internal data class PaymentForm(
+    val displayButton: Boolean? = null,
+    val description: String? = null,
+    val buttonText: String? = null,
+    val formType: String? = null
+) : Parcelable
+
+@Parcelize
+@Serializable
+internal data class Logo(
+    val width: Int? = null,
+    val height: Int? = null,
+    val url: String? = null,
+    val alt: String? = null,
+    val title: String? = null
 ) : Parcelable
 
 @Parcelize

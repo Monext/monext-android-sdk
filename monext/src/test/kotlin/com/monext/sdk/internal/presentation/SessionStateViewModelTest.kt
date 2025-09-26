@@ -147,7 +147,7 @@ class SessionStateViewModelTest {
         coVerify { threeDSManagerMock.generateSDKContextData(cardType) }
         coVerify { sessionStateRepositoryMock.makeWalletPayment(params = capture(captureWalletPaymentRequest)) }
 
-        assertEquals("CB", captureWalletPaymentRequest.captured.cardCode.name)
+        assertEquals("CB", captureWalletPaymentRequest.captured.cardCode)
         assertEquals(2, captureWalletPaymentRequest.captured.index)
         assertTrue(captureWalletPaymentRequest.captured.isEmbeddedRedirectionAllowed)
         assertEquals("", captureWalletPaymentRequest.captured.merchantReturnUrl)

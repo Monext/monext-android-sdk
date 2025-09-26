@@ -27,17 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
 import com.monext.sdk.internal.data.CardNetwork
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.ext.foreground
 import com.monext.sdk.internal.ext.s14
 import com.monext.sdk.internal.presentation.common.NoActionDialog
 import com.monext.sdk.internal.presentation.common.PaymentMethodChip
-import com.monext.sdk.internal.preview.PreviewWrapper
 
 @Composable
 internal fun CardNetworkSelector(
@@ -146,17 +143,5 @@ internal fun CardNetworkSelector(
             stringResource(R.string.dialog_choose_network_title),
             stringResource(R.string.dialog_choose_network_message)
         ) { showInfoModal = false }
-    }
-}
-
-@Preview
-@Composable
-internal fun CardNetworkSelectorPreview() {
-    PreviewWrapper {
-        CardNetworkSelector(
-            defNet = CardNetwork(PaymentMethodCardCode.CB, "1"),
-            altNet = CardNetwork(PaymentMethodCardCode.VISA, "2"),
-            selectedCardNetwork = CardNetwork(PaymentMethodCardCode.CB, "1")
-        ) {}
     }
 }

@@ -38,7 +38,7 @@ internal sealed interface FormData: Parcelable {
             SecuredPaymentParams(cvv = cvv)
     }
 
-    data class PayPal(val saveCard: Boolean): FormData {
+    data class AlternativePaymentMethodForm(val saveCard: Boolean): FormData {
         override fun paymentParams(): PaymentParams =
             PaymentParams(savePaymentData = saveCard)
     }

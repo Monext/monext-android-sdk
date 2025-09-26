@@ -38,10 +38,10 @@ import androidx.compose.ui.unit.dp
 import com.monext.sdk.Appearance
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
+import com.monext.sdk.internal.api.model.PaymentMethodCardCode
 import com.monext.sdk.internal.data.FormData
 import com.monext.sdk.internal.data.Issuer
 import com.monext.sdk.internal.data.sessionstate.FormOption
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.data.sessionstate.Wallet
 import com.monext.sdk.internal.ext.foreground
 import com.monext.sdk.internal.ext.s14
