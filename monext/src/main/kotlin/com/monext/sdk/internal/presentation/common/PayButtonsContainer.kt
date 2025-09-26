@@ -18,13 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.pay.button.PayButton
 import com.monext.sdk.GooglePayConfiguration
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
+import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.ext.bold
 import com.monext.sdk.internal.ext.foreground
 import com.monext.sdk.internal.ext.s18
@@ -32,6 +33,7 @@ import com.monext.sdk.internal.ext.s18
 @Composable
 internal fun PayButtonsContainer(
     amount: String,
+    selectedPaymentMethod: PaymentMethod?,
     canPay: Boolean,
     isLoading: Boolean,
     showsGooglePay: Boolean,
@@ -53,14 +55,13 @@ internal fun PayButtonsContainer(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        PaymentButton(amount, canPay, isLoading, onClick)
+        PaymentButton(amount, selectedPaymentMethod, canPay, isLoading, onClick)
 
         if (showsGooglePay) {
             PayButton(
                 onClick = onClickGooglePay,
                 allowedPaymentMethods = allowedPaymentMethods,
-                modifier = Modifier
-//                    .testTag("payButton")
+                modifier = Modifier.testTag("payButton")
                     .fillMaxWidth(),
                 theme = gPayConfig.theme,
                 type = gPayConfig.type,
@@ -71,13 +72,17 @@ internal fun PayButtonsContainer(
 }
 
 @Composable
-internal fun PaymentButton(amount: String, canPay: Boolean, isLoading: Boolean, onClick: () -> Unit) {
+internal fun PaymentButton(amount: String, selectedPaymentMethod: PaymentMethod?, canPay: Boolean, isLoading: Boolean, onClick: () -> Unit) {
 
     val theme = LocalAppearance.current
+    val text = selectedPaymentMethod?.data?.form?.buttonText
+        ?: stringResource(R.string.button_pay_title, amount)
 
     Surface(
         onClick,
-        Modifier.height(48.dp),
+        Modifier
+            .height(48.dp)
+            .testTag("PaymentButton"),
         enabled = canPay,
         shape = RoundedCornerShape(theme.buttonRadius),
         color = if (canPay) theme.secondaryColor else theme.secondaryColor.copy(alpha = 0.3f)
@@ -88,15 +93,19 @@ internal fun PaymentButton(amount: String, canPay: Boolean, isLoading: Boolean, 
             if (isLoading) {
 
                 CircularProgressIndicator(
-                    Modifier.size(24.dp),
+                    Modifier
+                        .size(24.dp)
+                        .testTag("PaymentButtonLoader"),
                     color = theme.onSecondaryColor,
                     strokeWidth = 2.dp
                 )
 
             } else {
                 Text(
-                    stringResource(R.string.button_pay_title, amount),
-                    style = theme.baseTextStyle.bold().s18().foreground(theme.onSecondaryColor)
+                    text,
+                    style = theme.baseTextStyle.bold().s18().foreground(theme.onSecondaryColor),
+                    modifier = Modifier
+                        .testTag("PaymentButtonText")
                 )
             }
 
@@ -113,19 +122,5 @@ internal fun PaymentButton(amount: String, canPay: Boolean, isLoading: Boolean, 
                 )
             }
         }
-    }
-}
-
-@Preview
-@Composable
-internal fun PaySectionPreview() {
-    Column {
-        val amount = "EUR 111,33"
-
-        PayButtonsContainer(amount, true, false, true, GooglePayConfiguration(), "", {}) {}
-
-        PayButtonsContainer(amount, false, false, true, GooglePayConfiguration(), "", {}) {}
-
-        PayButtonsContainer(amount, false, true, true, GooglePayConfiguration(), "", {}) {}
     }
 }

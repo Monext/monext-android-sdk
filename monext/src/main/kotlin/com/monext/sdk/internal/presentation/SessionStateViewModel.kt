@@ -159,19 +159,18 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         val cardCode = paymentMethod.cardCode ?: return
         val pmData = paymentMethod.data ?: return
 
-        val cardType = formData.cardNetwork?.network?.name ?: cardCode.name
-        val paymentParams = formData.paymentParams()
-
-        paymentParams.sdkContextData = initializeAndGetThreeDSData(cardType)
+        val cardType = formData.cardNetwork?.network ?: cardCode
 
         val displayMetrics = context.resources.displayMetrics
         val timeZone = TimeZone.getDefault()
         val millisecondsOffset = timeZone.getOffset(Date().time)
         val minutesOffset = TimeUnit.MILLISECONDS.toSeconds(millisecondsOffset.toLong()).toInt()
 
+        val paymentParams = formData.paymentParams()
+        paymentParams.sdkContextData = initializeAndGetThreeDSData(cardType)
 
         val params = SecuredPaymentRequest(
-            cardCode = cardCode.name,
+            cardCode = cardCode,
             contractNumber = pmData.contractNumber ?: "",
             deviceInfo = DeviceInfo(
                 colorDepth = 32,
@@ -228,7 +227,7 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         val pmData = paymentMethod.data ?: return
 
         val params = PaymentRequest(
-            cardCode = cardCode.name,
+            cardCode = cardCode,
             merchantReturnUrl = sessionStateRepository.returnURLString,
             isEmbeddedRedirectionAllowed = true,
             paymentParams = formData.paymentParams(),
@@ -247,7 +246,7 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
 
         val paymentParams = walletFormData.paymentParams()
         // Récupération des données 3DS
-        paymentParams.sdkContextData = initializeAndGetThreeDSData(walletCardType.name)
+        paymentParams.sdkContextData = initializeAndGetThreeDSData(walletCardType)
 
         val params = WalletPaymentRequest(
             cardCode = selectedWallet.cardCode,
@@ -308,7 +307,7 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         val cardCode = paymentMethod.cardCode ?: return@launch
 
         val params = PaymentRequest(
-            cardCode = cardCode.name,
+            cardCode = cardCode,
             merchantReturnUrl = sessionStateRepository.returnURLString,
             isEmbeddedRedirectionAllowed = false,
             paymentParams = PaymentParams(

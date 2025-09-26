@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.PaymentOverlayToggle
 import com.monext.sdk.R
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.ext.foreground
 import com.monext.sdk.internal.ext.s20
 

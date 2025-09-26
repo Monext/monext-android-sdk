@@ -9,8 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class Wallet(
     val additionalData: AdditionalData,
-    override val cardCode: PaymentMethodCardCode,
-    val cardType: PaymentMethodCardCode,
+    override val cardCode: String,
+    val cardType: String,
     val confirm: List<FormOption>,
     val customLogoRatio: Int,
     val expiredMore6Months: Boolean,

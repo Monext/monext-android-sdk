@@ -8,7 +8,6 @@ import com.monext.sdk.internal.api.model.request.PaymentRequest
 import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
 import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.api.model.response.SessionState
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.threeds.model.AuthenticationResponse
 import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKey
 import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKeyResponse
@@ -20,9 +19,9 @@ internal object PaymentAPIPreviewSuccess: PaymentAPI {
     override suspend fun walletPayment(sessionToken: String, params: WalletPaymentRequest): SessionState = PreviewSamples.sessionStateSuccess
     override suspend fun availableCardNetworks(sessionToken: String, params: AvailableCardNetworksRequest): AvailableCardNetworksResponse =
         AvailableCardNetworksResponse(
-            alternativeNetwork = PaymentMethodCardCode.VISA,
+            alternativeNetwork = "VISA",
             alternativeNetworkCode = "2",
-            defaultNetwork = PaymentMethodCardCode.CB,
+            defaultNetwork = "CB",
             defaultNetworkCode = "1",
             selectedContractNumber = "FAKE_CONTRACT"
         )

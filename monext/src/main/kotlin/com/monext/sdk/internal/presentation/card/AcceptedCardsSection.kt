@@ -21,8 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
+import com.monext.sdk.internal.api.model.PaymentMethodCardCode
 import com.monext.sdk.internal.data.PaymentMethod
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.ext.foreground
 import com.monext.sdk.internal.ext.s14
 import com.monext.sdk.internal.presentation.common.PaymentMethodChip

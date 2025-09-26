@@ -6,6 +6,7 @@ import com.monext.sdk.internal.api.AvailableCardNetworksResponse
 import com.monext.sdk.internal.api.HandledContract
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.DeviceInfo
+import com.monext.sdk.internal.api.model.PaymentMethodCardCode
 import com.monext.sdk.internal.api.model.request.PaymentParams
 import com.monext.sdk.internal.api.model.request.PaymentRequest
 import com.monext.sdk.internal.api.model.request.SecuredPaymentParams
@@ -16,7 +17,6 @@ import com.monext.sdk.internal.data.FormData
 import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.data.sessionstate.AdditionalData
 import com.monext.sdk.internal.data.sessionstate.FormOption
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodData
 import com.monext.sdk.internal.data.sessionstate.Wallet
 import com.monext.sdk.internal.presentation.PaymentAttempt
@@ -75,7 +75,7 @@ class SdkTestHelper {
 
         internal fun createWalletPaymentRequest(): WalletPaymentRequest {
             return WalletPaymentRequest(
-                cardCode = PaymentMethodCardCode.PAYPAL,
+                cardCode = "PAYPAL",
                 index = 1,
                 isEmbeddedRedirectionAllowed = true,
                 merchantReturnUrl = "http://merchant.com/return/url",
@@ -243,6 +243,8 @@ class SdkTestHelper {
             requestContext = null,
             shouldBeInTopPosition = false,
             state = null,
+            form = null,
+            logo = null,
         )
 
         internal fun createDirectoryServerSdkKey(): DirectoryServerSdkKey = DirectoryServerSdkKey(scheme = "CB",
@@ -253,5 +255,32 @@ class SdkTestHelper {
         internal fun createDirectoryServerSdkKeyResponse(): DirectoryServerSdkKeyResponse =
             DirectoryServerSdkKeyResponse(arrayOf(createDirectoryServerSdkKey()))
 
+        internal fun createPaymentMethodData(cardCode: String, hasForm: Boolean = false): PaymentMethodData =
+            PaymentMethodData(
+                cardCode = cardCode,
+                contractNumber = cardCode,
+                disabled = false,
+                hasForm = hasForm,
+                form = null,
+                hasLogo = false,
+                logo = null,
+                isIsolated = false,
+                options = listOf(FormOption.SAVE_PAYMENT_DATA),
+                paymentMethodAction = null,
+                additionalData = AdditionalData(
+                    merchantCapabilities = null,
+                    networks = null,
+                    applePayMerchantId = null,
+                    applePayMerchantName = null,
+                    savePaymentDataChecked = null,
+                    email = null,
+                    date = null,
+                    holder = null,
+                    pan = null
+                ),
+                requestContext = null,
+                shouldBeInTopPosition = null,
+                state = null
+            )
     }
 }

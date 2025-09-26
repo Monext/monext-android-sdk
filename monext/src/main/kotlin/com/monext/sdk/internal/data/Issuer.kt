@@ -1,6 +1,6 @@
 package com.monext.sdk.internal.data
 
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
+import com.monext.sdk.internal.api.model.PaymentMethodCardCode
 import com.monext.sdk.internal.data.sessionstate.Wallet
 
 internal enum class Issuer {
@@ -28,7 +28,7 @@ internal enum class Issuer {
             AMEX -> 4
         }
 
-    val associatedCardCodes: List<PaymentMethodCardCode>
+    val associatedCardCodes: List<String>
         get() = when (this) {
             VISA -> listOf(PaymentMethodCardCode.CB, PaymentMethodCardCode.MCVISA)
             MASTERCARD -> listOf(PaymentMethodCardCode.CB, PaymentMethodCardCode.MCVISA)

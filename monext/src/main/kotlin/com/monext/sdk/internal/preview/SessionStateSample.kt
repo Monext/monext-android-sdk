@@ -2,7 +2,6 @@ package com.monext.sdk.internal.preview
 
 import com.monext.sdk.internal.data.sessionstate.AdditionalData
 import com.monext.sdk.internal.data.sessionstate.FormOption
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodData
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
 import com.monext.sdk.internal.data.sessionstate.PaymentRedirectNoResponse
@@ -49,9 +48,9 @@ internal interface PreviewSamples {
 
         val wallets = listOf(
             Wallet(
-                cardCode = PaymentMethodCardCode.PAYPAL,
+                cardCode = "CB",
                 index = 1,
-                cardType = PaymentMethodCardCode.PAYPAL,
+                cardType = "CB",
                 isDefault = true,
                 isExpired = false,
                 expiredMore6Months = false,
@@ -76,9 +75,9 @@ internal interface PreviewSamples {
                 confirm = emptyList()
             ),
             Wallet(
-                cardCode = PaymentMethodCardCode.CB,
+                cardCode = "CB",
                 index = 2,
-                cardType = PaymentMethodCardCode.CB,
+                cardType = "CB",
                 isDefault = false,
                 isExpired = false,
                 expiredMore6Months = false,
@@ -118,7 +117,7 @@ internal interface PreviewSamples {
 
         val paymentMethodsData = listOf<PaymentMethodData>(
             PaymentMethodData(
-                cardCode = PaymentMethodCardCode.CB,
+                cardCode = "CB",
                 contractNumber = "CB_FAKE",
                 paymentMethodAction = 0,
                 state = "AVAILABLE",
@@ -134,10 +133,12 @@ internal interface PreviewSamples {
                     FormOption.ALT_NETWORK
                 ),
                 additionalData = emptyAdditionalData,
-                requestContext = null
+                requestContext = null,
+                form = null,
+                logo = null
             ),
             PaymentMethodData(
-                cardCode = PaymentMethodCardCode.AMEX,
+                cardCode = "AMEX",
                 contractNumber = "AMEX_FAKE",
                 paymentMethodAction = 0,
                 state = "AVAILABLE",
@@ -153,10 +154,12 @@ internal interface PreviewSamples {
                     FormOption.CVV,
                 ),
                 additionalData = emptyAdditionalData,
-                requestContext = null
+                requestContext = null,
+                form = null,
+                logo = null
             ),
             PaymentMethodData(
-                cardCode = PaymentMethodCardCode.PAYPAL,
+                cardCode = "ALTERNATIVE_PAYMENT_METHOD",
                 contractNumber = "PAYPAL_FAKE",
                 paymentMethodAction = 0,
                 state = "AVAILABLE",
@@ -169,22 +172,10 @@ internal interface PreviewSamples {
                     FormOption.SAVE_PAYMENT_DATA
                 ),
                 additionalData = emptyAdditionalData,
-                requestContext = null
+                requestContext = null,
+                form = null,
+                logo = null
             ),
-            PaymentMethodData(
-                cardCode = PaymentMethodCardCode.IDEAL,
-                contractNumber = "IDEAL_FAKE",
-                paymentMethodAction = 0,
-                state = "AVAILABLE",
-                hasLogo = false,
-                hasForm = false,
-                isIsolated = false,
-                disabled = false,
-                shouldBeInTopPosition = false,
-                options = emptyList(),
-                additionalData = emptyAdditionalData,
-                requestContext = null
-            )
         )
 
         val paymentMethodsList = PaymentMethodsList(
@@ -326,7 +317,7 @@ internal interface PreviewSamples {
         }
 
         val paymentRedirectNoResponse = PaymentRedirectNoResponse(
-            cardCode = PaymentMethodCardCode.CB,
+            cardCode = "CB",
             contractNumber = "CB_FAKE",
             walletCardIndex = 0,
             redirectionData = RedirectionData(
