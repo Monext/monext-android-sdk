@@ -6,10 +6,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
-import com.monext.sdk.MnxtEnvironment
-import com.monext.sdk.MnxtSDKContext
-import com.monext.sdk.PaymentResult
-import com.monext.sdk.PaymentSheet
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -47,7 +43,7 @@ class PaymentSheetTest {
 
         // Assert - Vérifie que le bottom sheet est visible
         composeTestRule
-            .onNodeWithTag("payment_bottom_sheet") 
+            .onNodeWithTag("payment_bottom_sheet")
             .assertIsDisplayed()
     }
 

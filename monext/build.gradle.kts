@@ -21,8 +21,12 @@ android {
     namespace = "com.monext.sdk"
     compileSdk = 36
 
+    version = getVersionName()
+
     defaultConfig {
         minSdk = 26
+        val versionName = getVersionName() // Version courante
+        val versionCode = getVersionCode() // Code du build
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -31,8 +35,9 @@ android {
         val apiKey = getApiKey()
         buildConfigField("String", "THREEDS_API_ACCESS_KEY", "\"${apiKey}\"")
 
-        val sdkVersion = System.getenv("SDK_VERSION") ?: "1.0.0"
-        buildConfigField("String", "SDK_VERSION", "\"${sdkVersion}\"")
+        // Métadonnées de build
+        buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
+        buildConfigField("long", "VERSION_CODE", "$versionCode")
     }
 
     buildTypes {
@@ -100,7 +105,12 @@ android {
     // Options de packaging
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes +=
+                setOf(
+                    "/META-INF/{AL2.0,LGPL2.1}",
+                    "META-INF/LICENSE.md",
+                    "META-INF/LICENSE-notice.md"
+                )
             // Important pour Netcetera SDK
             pickFirsts += "META-INF/DEPENDENCIES"
         }
@@ -122,6 +132,14 @@ android {
             isReturnDefaultValues = true
         }
         animationsDisabled = true  // Désactive les animations pour accélérer
+    }
+
+    libraryVariants.all {
+        outputs.all {
+            val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val versionName = getVersionName()
+            outputImpl.outputFileName = "monext-sdk-${versionName}-${name}.aar"
+        }
     }
 }
 
@@ -151,6 +169,23 @@ fun getApiKey(): String {
     return "DEVELOPMENT_KEY_REPLACE_IN_PRODUCTION"
 }
 
+// Fonction pour déterminer la version du SDK
+fun getVersionName(): String {
+    // Priorité :
+    // 1. Variable d'environnement (CI/CD)
+    // 2. Propriété gradle.properties ou -P
+    // 3. Valeur par défaut
+    return System.getenv("VERSION_NAME")
+        ?: project.findProperty("version") as? String
+        ?: "default"
+}
+// Fonction pour récupérer la version du build
+fun getVersionCode(): Int {
+    // GitHub Actions run number ou timestamp pour local
+    return System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        ?: (System.currentTimeMillis() / 1000).toInt()
+}
+
 // Configuration pour la publication Maven
 publishing {
     //  Configure comment publier sur Maven Central/GitHub
@@ -158,7 +193,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.monext"
             artifactId = "payment-sdk-android"
-            version = System.getenv("SDK_VERSION") ?: "1.0.0"
+            version = getVersionName()
 
             afterEvaluate {
                 from(components["release"])
@@ -232,7 +267,7 @@ publishing {
 
 // Configuration de la signature GPG pour Maven Central
 signing {
-    isRequired = System.getenv("CI") == "true" && System.getenv("SDK_VERSION") != null
+    isRequired = System.getenv("CI") == "true" && getVersionName() != "default"
 
     useInMemoryPgpKeys(
         System.getenv("SIGNING_KEY_ID"),
@@ -306,6 +341,14 @@ tasks {
     }
 }
 
+tasks.register("printVersion") {
+    println(getVersionName())
+}
+
+tasks.register("printVersionCode") {
+    println(getVersionCode())
+}
+
 // Configuration des tests avec coverage
 tasks.withType<Test> {
     useJUnitPlatform()
@@ -320,11 +363,17 @@ jacoco {
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {
+    description = "Generate Jacoco coverage report for both unit and instrumentation tests"
+    group = "verification"
+
+    // Dépend des tests unitaires ET d'instrumentation si disponibles
+    /*dependsOn(tasks.matching {
+        it.name in listOf("testDebugUnitTest", "createDebugCoverageReport")
+    })*/
     dependsOn("testDebugUnitTest")
 
     reports {
         xml.required.set(true)
-        xml.required.set(true)  // Pour SonarCloud
         html.required.set(true)
         csv.required.set(false)
     }
@@ -350,8 +399,8 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     executionData.setFrom(
         fileTree(layout.buildDirectory.get().asFile) {
-            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
-            include("jacoco/testDebugUnitTest.exec")
+            include("**/*.exec")  // Tests unitaires
+            include("**/*.ec")    // Tests d'instrumentation
         }
     )
 }
@@ -359,7 +408,9 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
+    implementation(libs.androidx.activity)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -368,7 +419,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.bouncycastle.bcprov)
-    implementation(libs.compose.pay.button)
+    api(libs.compose.pay.button)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.slf4j.api)
@@ -392,4 +443,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4.android)
+    androidTestImplementation(libs.io.mockk)
+    androidTestImplementation(libs.io.mockk.agent)
+    androidTestImplementation(libs.io.mockk.android)
 }

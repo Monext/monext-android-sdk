@@ -341,23 +341,5 @@ internal interface PreviewSamples {
                 isCompletionMethod = true
             )
         )
-
-        val sessionStateRedirect = SessionState(
-            token = "fake_token",
-            type = SessionStateType.PAYMENT_REDIRECT_NO_RESPONSE,
-            creationDate = "Tue Mar 25 12:33:22 CET 2025",
-            cancelUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
-            pointOfSale = "POS_Fake",
-            language = "en",
-            returnUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
-            automaticRedirectAtSessionsEnd = false,
-            info = sessionInfo,
-            pointOfSaleAddress = posAddress,
-            isSandbox = true,
-            paymentMethodsList = null,
-            paymentRedirectNoResponse = paymentRedirectNoResponse,
-            paymentSuccess = null,
-            paymentFailure = null
-        )
     }
 }

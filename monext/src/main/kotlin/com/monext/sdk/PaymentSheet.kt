@@ -160,7 +160,6 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                             scope.launch {
                                 sheetState.hide()
                             }.invokeOnCompletion {
-//                                if (!sheetState.isVisible) {
                                 onResult(
                                     PaymentResult.SheetDismissed(
                                         viewModel.sessionState.value?.type?.toTransactionState()
@@ -169,7 +168,6 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                                 if (!sheetState.isVisible) {
                                     onIsShowingChange?.invoke(false)
                                 }
-//                                }
                             }
                         }
 
@@ -194,7 +192,8 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                             onRedirectionComplete = { viewModel.updateSessionState(sessionToken) },
                             onRetry = { /* TODO: implement RETRY */ },
                             onResult = onResult,
-                            onIsShowingChange = isShowingChangeWrapper
+                            onIsShowingChange = isShowingChangeWrapper,
+                            showOverlay = { showingOverlay = it }
                         )
                     }
 
@@ -215,7 +214,17 @@ internal data class PaymentOverlayToggle(
     val paymentMethodCardCode: PaymentMethodCardCode?
 ) {
     companion object {
-        fun on(cardCode: PaymentMethodCardCode?): PaymentOverlayToggle = PaymentOverlayToggle(true, cardCode)
+        /**
+         * Objet pour persister le dernier cardCode / network sélectionné
+         */
+        private var selectedCardCode:PaymentMethodCardCode? = null
+
+        fun on(cardCode: PaymentMethodCardCode?): PaymentOverlayToggle {
+            // On persiste le dernier cardCode sélectionné
+            selectedCardCode = cardCode;
+            return PaymentOverlayToggle(true, cardCode)
+        }
+        fun on(): PaymentOverlayToggle = PaymentOverlayToggle(true, selectedCardCode)
         fun off(): PaymentOverlayToggle = PaymentOverlayToggle(false, null)
     }
 }

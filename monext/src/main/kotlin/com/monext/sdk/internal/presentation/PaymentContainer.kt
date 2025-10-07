@@ -1,15 +1,16 @@
 package com.monext.sdk.internal.presentation
 
 import androidx.compose.runtime.Composable
+import com.monext.sdk.PaymentOverlayToggle
 import com.monext.sdk.PaymentResult
 import com.monext.sdk.PaymentResult.PaymentCompleted
 import com.monext.sdk.PaymentResult.TransactionState
-import com.monext.sdk.internal.data.FormData
-import com.monext.sdk.internal.data.PaymentMethod
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
 import com.monext.sdk.internal.api.model.SessionInfo
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
+import com.monext.sdk.internal.data.FormData
+import com.monext.sdk.internal.data.PaymentMethod
+import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
 import com.monext.sdk.internal.data.sessionstate.Wallet
 import com.monext.sdk.internal.presentation.status.LoadingSection
 import com.monext.sdk.internal.presentation.status.PaymentCanceledScreen
@@ -17,6 +18,7 @@ import com.monext.sdk.internal.presentation.status.PaymentFailureScreen
 import com.monext.sdk.internal.presentation.status.PaymentRedirectionScreen
 import com.monext.sdk.internal.presentation.status.PaymentSuccessScreen
 import com.monext.sdk.internal.presentation.status.TokenExpiredScreen
+import com.monext.sdk.internal.threeds.view.PaymentSdkChallengeScreen
 
 internal data class PaymentAttempt(
     val selectedPaymentMethod: PaymentMethod?,
@@ -36,7 +38,8 @@ internal fun PaymentContainer(
     onRedirectionComplete: () -> Unit,
     onRetry: () -> Unit,
     onResult: (PaymentResult) -> Unit,
-    onIsShowingChange: ((Boolean) -> Unit)? = null
+    onIsShowingChange: ((Boolean) -> Unit)? = null,
+    showOverlay: (PaymentOverlayToggle) -> Unit
 ) {
 
     if (sessionState?.type?.isFinalState() == true) {
@@ -65,7 +68,6 @@ internal fun PaymentContainer(
         }
     }
 
-
     when (sessionState?.type) {
         SessionStateType.PAYMENT_METHODS_LIST -> {
             sessionState.info?.let { info ->
@@ -83,19 +85,25 @@ internal fun PaymentContainer(
             } ?: LoadingSection()
         }
 
+        SessionStateType.SDK_CHALLENGE -> {
+            sessionState.paymentSdkChallenge?.sdkChallengeData?.let { data ->
+                PaymentSdkChallengeScreen(sdkChallengeData = data, showOverlay)
+            } ?: LoadingSection()
+        }
+
         SessionStateType.PAYMENT_SUCCESS -> {
             sessionState.info?.let { info ->
                 sessionState.paymentSuccess?.let { success ->
-                    PaymentSuccessScreen(info, success) { onIsShowingChange?.invoke(false) }
+                    PaymentSuccessScreen(info, successData = success) { onIsShowingChange?.invoke(false) }
                 }
             } ?: LoadingSection()
         }
 
         SessionStateType.PAYMENT_FAILURE -> {
             PaymentFailureScreen(
-                    sessionState.info?.formattedAmount ?: "",
-                    onRetry = onRetry,
-                    onExit = { onIsShowingChange?.invoke(false) })
+                sessionState.info?.formattedAmount ?: "",
+                onRetry = onRetry,
+                onExit = { onIsShowingChange?.invoke(false) })
         }
 
         SessionStateType.PAYMENT_CANCELED -> {

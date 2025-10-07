@@ -1,8 +1,5 @@
 package com.monext.sdk.internal.exception
 
-import kotlin.Throwable
-
-
 enum class ThreeDsExceptionType() {
     INITIALISATION_FAILED,
     NOT_INITIALISED,

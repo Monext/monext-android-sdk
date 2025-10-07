@@ -24,6 +24,10 @@ import com.monext.sdk.internal.presentation.wallet.WalletsView
 import com.monext.sdk.internal.preview.PreviewSamples
 import com.monext.sdk.internal.preview.PreviewWrapper
 
+/**
+ * Composant qui permet d'afficher la Liste des moyens de paiement disponible à l'acheteur.
+ * State : PAYMENT_METHOD_LIST
+ */
 @Composable
 internal fun PaymentMethodsScreen(
     paymentMethodsList: PaymentMethodsList,

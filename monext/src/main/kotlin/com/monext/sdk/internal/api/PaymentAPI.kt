@@ -11,6 +11,7 @@ import com.monext.sdk.internal.data.CardNetwork
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.exception.NetworkError
 import com.monext.sdk.internal.service.Logger
+import com.monext.sdk.internal.threeds.model.AuthenticationResponse
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -37,6 +38,9 @@ internal interface PaymentAPI {
 
     @Throws(NetworkError::class)
     suspend fun fetchDirectoryServerSdkKeys(sessionToken: String): DirectoryServerSdkKeyResponse
+
+    @Throws(NetworkError::class)
+    suspend fun sdkPaymentRequest(sessionToken: String, params: AuthenticationResponse): SessionState
 
     fun updateContext(context: InternalSDKContext)
 }
@@ -139,6 +143,18 @@ internal class PaymentAPIImpl(
         val baseUrl = buildBaseUrl(environment)
         val url = appendPath(baseUrl, sessionToken, "directoryServerSdkKeys")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.GET)
+        return makeRequest(httpRequest)
+    }
+
+    /**
+     * POST /token/{token}/SdkPaymentRequest
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @Throws(NetworkError::class)
+    override suspend fun sdkPaymentRequest(sessionToken: String, params: AuthenticationResponse): SessionState {
+        val baseUrl = buildBaseUrl(environment)
+        val url = appendPath(baseUrl, sessionToken, "SdkPaymentRequest")
+        val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
         return makeRequest(httpRequest)
     }
 

@@ -1,10 +1,7 @@
 package com.monext.sdk.internal.api
 
 import com.monext.sdk.MnxtEnvironment
-import com.monext.sdk.internal.api.model.DeviceInfo
-import com.monext.sdk.internal.api.model.request.PaymentParams
-import com.monext.sdk.internal.api.model.request.SecuredPaymentParams
-import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
+import com.monext.sdk.SdkTestHelper
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
 import com.monext.sdk.internal.service.CustomLogger
@@ -184,9 +181,9 @@ class PaymentAPIImplTest {
     @Test
     fun securedPayment() = runTest(testDispatcher) {
         // Given
-        val securedPaymentRequest = createSecuredPaymentRequestCB()
+        val securedPaymentRequest = SdkTestHelper.createSecuredPaymentRequestCB()
         val expectedSessionState = SessionStateType.PAYMENT_SUCCESS
-        val expectedBody: String = "{\"cardCode\":\"CB\",\"contractNumber\":\"CB_01\",\"deviceInfo\":{\"colorDepth\":32,\"containerHeight\":498.467,\"containerWidth\":750,\"javaEnabled\":false,\"screenHeight\":2424,\"screenWidth\":400,\"timeZoneOffset\":0},\"isEmbeddedRedirectionAllowed\":false,\"merchantReturnUrl\":\"http://merchant.dev.com/return/url\",\"paymentParams\":{\"NETWORK\":\"2\",\"EXPI_DATE\":\"1228\",\"SAVE_PAYMENT_DATA\":false,\"HOLDER\":\"Jean-Claude\",\"SDK_CONTEXT_DATA\":\"{\\\"deviceRenderingOptionsIF\\\":\\\"01\\\",\\\"deviceRenderOptionsUI\\\":\\\"03\\\",\\\"maxTimeout\\\":60,\\\"referenceNumber\\\":\\\"3DS_LOA_SDK_NEAG_020301_00792\\\",\\\"ephemPubKey\\\":\\\"P-256;EC;3OXzA9Qt5sV8Ejqd_XXXXXXXXXXZW7Z0AnL4;VC94_YYYYYYYYYYYYYYYYY2r3g\\\",\\\"appID\\\":\\\"510000-0f48-4d7b-b00a-1b20000001\\\",\\\"transID\\\":\\\"e450000c0-2300-4000-a46f-3783b5141085\\\",\\\"encData\\\":\\\"xxxxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyy-oooooooooooooooooooooo-j9314Zwn_9LBTRvdSeI65JwHn_SB-KFTpnbZ8lFJMbfjcTgRTfoDpuU2ALLPIfE81yyUqulfYeUJ0tIVpQk6VMtwL5QfAIU2w4jZ30IlQIChCCW6OXipslYCihAAN-3g9HjY48dBQeNp-IHnMFVnnG-AxI65hgCptmJsoGAR7QrRgQ.zS1yZ6cHMPcdjvu2iw6ayA.nEN6fkOdbnCRZZSZ7UY39Qx829dGegNitt5QqSoYZ6-ZKiCCLHp2b_daHV3waQWZ4FaGMT9QLdQaX-tizhBi6tzb4yFIhWtNUDuz6_dQ-SNl-I4OIzAJURbXCkeY4gkH_rlyZdWCBykKwZ8PLBamgIKkXc9QEyvVhmxUrSdRUJ2DTJjQ2NEo_Xo90uJh62mbdvnYh8sD4-HoHPYDxoH-L-8bVdERM9ppSktuPneOvHwR5GR9Yk7RXv91emLV64QB-uWFJ-Jibg2pWjSZxTS5g-DkEzsjF3EQxIfewxdFmsmjV30G5Kzom0J3-iAfgPaRW8Ir9PCVYUSyn9p2GwN9EeU6W0Rvge4Fnz0-soDQ3DO8KU6ABueouZlE_CPHG7zJTXzOXuPXs5QFWImyXNdB_azgOFEWQLQ1071dWLmKkKCo3kAuzXTzeNqJJgHypprDmOUtpyDIaf-41_r6UVYmRXVIyQfYbW0mABFIzMD6NMLrlu4EB25g913wT_806xZK-q43N8XqBWwaRLvWhFstqEEELKImGzAB0YSP3v3z6lo1qh4q1OY53tcTpynq48MzIhXHRL4DmvxKvNLHOzjU7765GyjFv8Hm2rumoAV1Te50BZB5XKKivSBY52OBuqBWVg1KqLHzUlEx32jGqLZTyxP92AHOGBWHRlWf8EKC121311111111111111EwO5GtaT-34B9tOOHXgVruS9pl0PH8MztIwlfM3llBZo4xTGLPYNycVQ2c0qU1iAGO5YwPnhkABBTornkNQZJQK1M83cQ0HOtL-RRRew00000000000000000000eQO6Wxzkos0PRGOrJ1WYqmTkR4GFyg0g0QT8G94jSXYytPo9mzKfSYYPWPNjbD0Q64MJ8_wi9QzPzCeBR8bPj1724ppaGLz29Bjkcs2mP4w-7ZMT1G6685NTmt6HL176WQUjzlwpBOw03FnUUmG3mDRtzHF2Hccl_YWuBYWExQrUfDL-Ldjzg_D9b8qKeJ2ftVTwjZ9ih9vdYCi7L2cwc5ksJHo03g6Le6egzQD2GqUq4lhIoKfEVHZ4ri8MtDQXYn6XyUG8kw7u-JceGR0AthxUp2lQx6hdNfwNm0FJTqIPsKNTED_6FJ1CiHyaR8ZX-LC\\\"}\"},\"securedPaymentParams\":{\"PAN\":\"4970109000000007\",\"CVV\":\"123\"}}"
+        val expectedBody = "{\"cardCode\":\"CB\",\"contractNumber\":\"CB_01\",\"deviceInfo\":{\"colorDepth\":32,\"containerHeight\":498.467,\"containerWidth\":750,\"javaEnabled\":false,\"screenHeight\":2424,\"screenWidth\":400,\"timeZoneOffset\":0},\"isEmbeddedRedirectionAllowed\":false,\"merchantReturnUrl\":\"http://merchant.dev.com/return/url\",\"paymentParams\":{\"NETWORK\":\"2\",\"EXPI_DATE\":\"1228\",\"SAVE_PAYMENT_DATA\":false,\"HOLDER\":\"Jean-Claude\",\"SDK_CONTEXT_DATA\":\"{\\\"deviceRenderingOptionsIF\\\":\\\"01\\\",\\\"deviceRenderOptionsUI\\\":\\\"03\\\",\\\"maxTimeout\\\":60,\\\"referenceNumber\\\":\\\"3DS_LOA_SDK_NEAG_020301_00792\\\",\\\"ephemPubKey\\\":\\\"P-256;EC;3OXzA9Qt5sV8Ejqd_XXXXXXXXXXZW7Z0AnL4;VC94_YYYYYYYYYYYYYYYYY2r3g\\\",\\\"appID\\\":\\\"510000-0f48-4d7b-b00a-1b20000001\\\",\\\"transID\\\":\\\"e450000c0-2300-4000-a46f-3783b5141085\\\",\\\"encData\\\":\\\"xxxxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyy-oooooooooooooooooooooo-j9314Zwn_9LBTRvdSeI65JwHn_SB-KFTpnbZ8lFJMbfjcTgRTfoDpuU2ALLPIfE81yyUqulfYeUJ0tIVpQk6VMtwL5QfAIU2w4jZ30IlQIChCCW6OXipslYCihAAN-3g9HjY48dBQeNp-IHnMFVnnG-AxI65hgCptmJsoGAR7QrRgQ.zS1yZ6cHMPcdjvu2iw6ayA.nEN6fkOdbnCRZZSZ7UY39Qx829dGegNitt5QqSoYZ6-ZKiCCLHp2b_daHV3waQWZ4FaGMT9QLdQaX-tizhBi6tzb4yFIhWtNUDuz6_dQ-SNl-I4OIzAJURbXCkeY4gkH_rlyZdWCBykKwZ8PLBamgIKkXc9QEyvVhmxUrSdRUJ2DTJjQ2NEo_Xo90uJh62mbdvnYh8sD4-HoHPYDxoH-L-8bVdERM9ppSktuPneOvHwR5GR9Yk7RXv91emLV64QB-uWFJ-Jibg2pWjSZxTS5g-DkEzsjF3EQxIfewxdFmsmjV30G5Kzom0J3-iAfgPaRW8Ir9PCVYUSyn9p2GwN9EeU6W0Rvge4Fnz0-soDQ3DO8KU6ABueouZlE_CPHG7zJTXzOXuPXs5QFWImyXNdB_azgOFEWQLQ1071dWLmKkKCo3kAuzXTzeNqJJgHypprDmOUtpyDIaf-41_r6UVYmRXVIyQfYbW0mABFIzMD6NMLrlu4EB25g913wT_806xZK-q43N8XqBWwaRLvWhFstqEEELKImGzAB0YSP3v3z6lo1qh4q1OY53tcTpynq48MzIhXHRL4DmvxKvNLHOzjU7765GyjFv8Hm2rumoAV1Te50BZB5XKKivSBY52OBuqBWVg1KqLHzUlEx32jGqLZTyxP92AHOGBWHRlWf8EKC121311111111111111EwO5GtaT-34B9tOOHXgVruS9pl0PH8MztIwlfM3llBZo4xTGLPYNycVQ2c0qU1iAGO5YwPnhkABBTornkNQZJQK1M83cQ0HOtL-RRRew00000000000000000000eQO6Wxzkos0PRGOrJ1WYqmTkR4GFyg0g0QT8G94jSXYytPo9mzKfSYYPWPNjbD0Q64MJ8_wi9QzPzCeBR8bPj1724ppaGLz29Bjkcs2mP4w-7ZMT1G6685NTmt6HL176WQUjzlwpBOw03FnUUmG3mDRtzHF2Hccl_YWuBYWExQrUfDL-Ldjzg_D9b8qKeJ2ftVTwjZ9ih9vdYCi7L2cwc5ksJHo03g6Le6egzQD2GqUq4lhIoKfEVHZ4ri8MtDQXYn6XyUG8kw7u-JceGR0AthxUp2lQx6hdNfwNm0FJTqIPsKNTED_6FJ1CiHyaR8ZX-LC\\\"}\"},\"securedPaymentParams\":{\"PAN\":\"4970109000000007\",\"CVV\":\"123\"}}"
 
         mockHttpClientResponse(responseBody = RESPONSE_CONTEXT_SUCCESS)
 
@@ -204,39 +201,50 @@ class PaymentAPIImplTest {
         )
     }
 
-    private fun createSecuredPaymentRequestCB(): SecuredPaymentRequest = SecuredPaymentRequest(
-        cardCode = "CB",
-        contractNumber = "CB_01",
-        deviceInfo = createDeviceInfo(),
-        isEmbeddedRedirectionAllowed = false,
-        merchantReturnUrl = "http://merchant.dev.com/return/url",
-        paymentParams = PaymentParams(
-            network = "2",
-            expirationDate = "1228",
-            savePaymentData = false,
-            holderName = "Jean-Claude",
-            sdkContextData = "{\"deviceRenderingOptionsIF\":\"01\",\"deviceRenderOptionsUI\":\"03\",\"maxTimeout\":60,\"referenceNumber\":\"3DS_LOA_SDK_NEAG_020301_00792\",\"ephemPubKey\":\"P-256;EC;3OXzA9Qt5sV8Ejqd_XXXXXXXXXXZW7Z0AnL4;VC94_YYYYYYYYYYYYYYYYY2r3g\",\"appID\":\"510000-0f48-4d7b-b00a-1b20000001\",\"transID\":\"e450000c0-2300-4000-a46f-3783b5141085\",\"encData\":\"xxxxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyy-oooooooooooooooooooooo-j9314Zwn_9LBTRvdSeI65JwHn_SB-KFTpnbZ8lFJMbfjcTgRTfoDpuU2ALLPIfE81yyUqulfYeUJ0tIVpQk6VMtwL5QfAIU2w4jZ30IlQIChCCW6OXipslYCihAAN-3g9HjY48dBQeNp-IHnMFVnnG-AxI65hgCptmJsoGAR7QrRgQ.zS1yZ6cHMPcdjvu2iw6ayA.nEN6fkOdbnCRZZSZ7UY39Qx829dGegNitt5QqSoYZ6-ZKiCCLHp2b_daHV3waQWZ4FaGMT9QLdQaX-tizhBi6tzb4yFIhWtNUDuz6_dQ-SNl-I4OIzAJURbXCkeY4gkH_rlyZdWCBykKwZ8PLBamgIKkXc9QEyvVhmxUrSdRUJ2DTJjQ2NEo_Xo90uJh62mbdvnYh8sD4-HoHPYDxoH-L-8bVdERM9ppSktuPneOvHwR5GR9Yk7RXv91emLV64QB-uWFJ-Jibg2pWjSZxTS5g-DkEzsjF3EQxIfewxdFmsmjV30G5Kzom0J3-iAfgPaRW8Ir9PCVYUSyn9p2GwN9EeU6W0Rvge4Fnz0-soDQ3DO8KU6ABueouZlE_CPHG7zJTXzOXuPXs5QFWImyXNdB_azgOFEWQLQ1071dWLmKkKCo3kAuzXTzeNqJJgHypprDmOUtpyDIaf-41_r6UVYmRXVIyQfYbW0mABFIzMD6NMLrlu4EB25g913wT_806xZK-q43N8XqBWwaRLvWhFstqEEELKImGzAB0YSP3v3z6lo1qh4q1OY53tcTpynq48MzIhXHRL4DmvxKvNLHOzjU7765GyjFv8Hm2rumoAV1Te50BZB5XKKivSBY52OBuqBWVg1KqLHzUlEx32jGqLZTyxP92AHOGBWHRlWf8EKC121311111111111111EwO5GtaT-34B9tOOHXgVruS9pl0PH8MztIwlfM3llBZo4xTGLPYNycVQ2c0qU1iAGO5YwPnhkABBTornkNQZJQK1M83cQ0HOtL-RRRew00000000000000000000eQO6Wxzkos0PRGOrJ1WYqmTkR4GFyg0g0QT8G94jSXYytPo9mzKfSYYPWPNjbD0Q64MJ8_wi9QzPzCeBR8bPj1724ppaGLz29Bjkcs2mP4w-7ZMT1G6685NTmt6HL176WQUjzlwpBOw03FnUUmG3mDRtzHF2Hccl_YWuBYWExQrUfDL-Ldjzg_D9b8qKeJ2ftVTwjZ9ih9vdYCi7L2cwc5ksJHo03g6Le6egzQD2GqUq4lhIoKfEVHZ4ri8MtDQXYn6XyUG8kw7u-JceGR0AthxUp2lQx6hdNfwNm0FJTqIPsKNTED_6FJ1CiHyaR8ZX-LC\"}"
-        ),
-        securedPaymentParams = SecuredPaymentParams(
-            pan = "4970109000000007",
-            cvv = "123"
-        )
-    )
+    @Test
+    fun sdkPayment() = runTest(testDispatcher) {
+        // Given
+        val request = SdkTestHelper.createAuthenticationResponse("Y")
+        val expectedSessionState = SessionStateType.PAYMENT_SUCCESS
+        val expectedBody = "{\"acsReferenceNumber\":\"acsReferenceNumber\",\"acsTransID\":\"acsTransID\",\"threeDSVersion\":\"threeDSVersion\",\"threeDSServerTransID\":\"threeDSServerTransID\",\"transStatus\":\"Y\"}"
 
-    private fun createDeviceInfo(): DeviceInfo = DeviceInfo(
-        colorDepth = 32,
-        containerHeight = 498.467,
-        containerWidth = 750,
-        javaEnabled = false,
-        screenHeight = 2424,
-        screenWidth = 400,
-        timeZoneOffset = 0
-    )
+        mockHttpClientResponse(responseBody = RESPONSE_CONTEXT_SUCCESS)
+
+        // When
+        val result = paymentApi.sdkPaymentRequest(sessionToken = sessionToken, params = request)
+
+        // Then
+        checkResponseSuccess(expectedSessionState, result)
+
+        // On check aussi la request envoyée
+        checkHttpRequest(
+            url = "https://test.example.com/api/v1/services/token/test-session-token-123/SdkPaymentRequest",
+            method = "POST",
+            body = expectedBody
+        )
+    }
 
     @Test
-    @Ignore
-    fun payment() {
-        // TODO
+    fun payment() = runTest(testDispatcher) {
+        // Given
+        val request = SdkTestHelper.createPaymentRequestCB()
+        val expectedSessionState = SessionStateType.PAYMENT_SUCCESS
+        val expectedBody = "{\"cardCode\":\"CB\",\"merchantReturnUrl\":\"http://merchant.dev.com/return/url\",\"isEmbeddedRedirectionAllowed\":false,\"paymentParams\":{\"NETWORK\":\"2\",\"EXPI_DATE\":\"1228\",\"SAVE_PAYMENT_DATA\":false,\"HOLDER\":\"Jean-Claude\"},\"contractNumber\":\"CB_01\"}"
+
+        mockHttpClientResponse(responseBody = RESPONSE_CONTEXT_SUCCESS)
+
+        // When
+        val result = paymentApi.payment(sessionToken = sessionToken, params = request)
+
+        // Then
+        checkResponseSuccess(expectedSessionState, result)
+
+        // On check aussi la request envoyée
+        checkHttpRequest(
+            url = "https://test.example.com/api/v1/services/token/test-session-token-123/paymentRequest",
+            method = "POST",
+            body = expectedBody
+        )
     }
 
     @Test
@@ -256,7 +264,6 @@ class PaymentAPIImplTest {
     fun availableCardNetworks() {
         // TODO
     }
-
 
     /**
      * Fonction qui permet de vérifier la validité du Mapping des champs pour la réponse SUCCES. Basé sur la variable : RESPONSE_CONTEXT_SUCCESS
@@ -290,8 +297,6 @@ class PaymentAPIImplTest {
         assertEquals(false, result.paymentSuccess.fragmented)
         assertNotNull(result.paymentSuccess.ticket)
     }
-
-
 
     private fun checkHttpRequest(url: String,
                                  method: String? = "POST",

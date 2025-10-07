@@ -12,7 +12,7 @@ import javax.net.ssl.HttpsURLConnection
 /**
  * Interface pour abstraire les appels HTTP
  */
-interface HttpClient {
+internal fun interface HttpClient {
     suspend fun execute(request: HttpRequest): HttpResponse
 }
 

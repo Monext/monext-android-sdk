@@ -3,7 +3,6 @@ package com.monext.sdk.internal.data.sessionstate
 import android.os.Parcelable
 import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.data.PaymentMethod.Cards
-import com.monext.sdk.internal.presentation.paymentmethods.GooglePayRequestData
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -78,10 +77,7 @@ internal data class PaymentMethodData(
 
     val paymentMethodAction: Int?,
 
-    // ???
-//    let paymentParamsToBeControlled: [Any]
-
-    val additionalData: AdditionalData,
+    val additionalData: AdditionalData?,
 
     val requestContext: RequestContext?,
 

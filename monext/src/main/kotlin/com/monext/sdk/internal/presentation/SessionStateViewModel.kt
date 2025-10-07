@@ -2,7 +2,6 @@ package com.monext.sdk.internal.presentation
 
 import android.app.Application
 import android.content.Context
-import android.icu.util.TimeZone
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -35,7 +34,8 @@ import com.monext.sdk.internal.data.sessionstate.Wallet
 import com.monext.sdk.internal.presentation.paymentmethods.GooglePayRequestData
 import com.monext.sdk.internal.presentation.paymentmethods.GooglePayUtil
 import com.monext.sdk.internal.threeds.ThreeDSManager
-import com.monext.sdk.internal.threeds.model.SDKContextData
+import com.monext.sdk.internal.threeds.model.SdkContextData
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,9 +45,12 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.util.Date
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
-internal class SessionStateViewModel(val sessionStateRepository: SessionStateRepository, val app: Application): AndroidViewModel(app) {
+internal class SessionStateViewModel(val sessionStateRepository: SessionStateRepository,
+                                     val app: Application,
+                                     val dispatcher: CoroutineDispatcher = Dispatchers.IO): AndroidViewModel(app) {
 
     companion object {
 
@@ -149,7 +152,7 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
     /**
      * Fonction qui permet de traiter les paiements par Carte
      */
-    private suspend fun makeCardPayment(paymentFormData: FormData?, context: Context, showOverlay: (PaymentOverlayToggle) -> Unit) {
+    internal suspend fun makeCardPayment(paymentFormData: FormData?, context: Context, showOverlay: (PaymentOverlayToggle) -> Unit) {
 
         val formData = (paymentFormData as? FormData.Card) ?: return
         val paymentMethod = formData.paymentMethod
@@ -158,15 +161,21 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
 
         val cardType = formData.cardNetwork?.network?.name ?: cardCode.name
 
-        // On check si le 3DS est initialisé, si ce n'est pas le cas, on le fait
-        if(!sessionStateRepository.threeDSManager.isInitialized) {
-            withContext(Dispatchers.IO) {
-                // Blocking network request code
-                sessionStateRepository.threeDSManager.initialize(sessionToken = sessionState.value!!.token, cardCode = cardType)
-            }
+        // Si le 3DS est déjà initialisé, on le close pour le ré-init
+        if(sessionStateRepository.threeDSManager.isInitialized) {
+            sessionStateRepository.threeDSManager.closeTransaction()
         }
 
-        val sdkContextData: SDKContextData =
+        // A garder car doit etre executé dans une coroutine
+        withContext(dispatcher) {
+            // Blocking network request code
+            sessionStateRepository.threeDSManager.startInitialize(
+                sessionToken = sessionState.value!!.token,
+                cardCode = cardType
+            )
+        }
+
+        val sdkContextData: SdkContextData =
             sessionStateRepository.threeDSManager.generateSDKContextData(cardType)
 
         val displayMetrics = context.resources.displayMetrics
@@ -195,7 +204,8 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
             securedPaymentParams = formData.securedPaymentParams()
         )
 
-        showOverlay(PaymentOverlayToggle.on(formData.cardNetwork?.network ?: cardCode))
+        val selectedCardNetwork = formData.cardNetwork?.network ?: cardCode
+        showOverlay(PaymentOverlayToggle.on(selectedCardNetwork))
         sessionStateRepository.makeSecuredPayment(params)
         showOverlay(PaymentOverlayToggle.off())
     }

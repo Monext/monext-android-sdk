@@ -1,32 +1,43 @@
 package com.monext.sdk.internal.threeds
 
 import ThreeDSConfiguration
+import android.app.Activity
 import android.content.Context
-import android.util.Base64
+import com.monext.sdk.Appearance
+import com.monext.sdk.R
+import com.monext.sdk.internal.api.PaymentAPI
+import com.monext.sdk.internal.api.configuration.InternalSDKContext
+import com.monext.sdk.internal.exception.ThreeDsException
+import com.monext.sdk.internal.exception.ThreeDsExceptionType
+import com.monext.sdk.internal.threeds.model.ChallengeUseCaseCallback
+import com.monext.sdk.internal.threeds.model.SdkChallengeData
+import com.monext.sdk.internal.threeds.model.SdkContextData
 import com.netcetera.threeds.sdk.ThreeDS2ServiceInstance
 import com.netcetera.threeds.sdk.api.ThreeDS2Service
 import com.netcetera.threeds.sdk.api.configparameters.ConfigParameters
 import com.netcetera.threeds.sdk.api.configparameters.builder.ConfigurationBuilder
 import com.netcetera.threeds.sdk.api.configparameters.builder.SchemeConfiguration
 import com.netcetera.threeds.sdk.api.exceptions.SDKNotInitializedException
+import com.netcetera.threeds.sdk.api.transaction.Transaction
+import com.netcetera.threeds.sdk.api.transaction.challenge.ChallengeParameters
+import com.netcetera.threeds.sdk.api.transaction.challenge.ChallengeStatusReceiver
 import com.netcetera.threeds.sdk.api.ui.logic.UiCustomization
-import com.monext.sdk.R
-import com.monext.sdk.internal.api.PaymentAPI
-import com.monext.sdk.internal.api.configuration.InternalSDKContext
-import com.monext.sdk.internal.threeds.model.SDKContextData
-import com.monext.sdk.internal.exception.ThreeDsException
-import com.monext.sdk.internal.exception.ThreeDsExceptionType
+import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.json.JSONException
-import org.json.JSONObject
-import java.util.Collections
+import java.util.Base64
+
 
 internal class ThreeDSManager (val paymentApi: PaymentAPI,
                                var internalSDKContext: InternalSDKContext,
-                               var context: Context){
+                               var context: Context,
+                               val threeDS2ServiceProvided : ThreeDS2Service? = null,  // Injection du Service pour les Tests... Pas trouvé d'autre solution...
+                               val threeDSBusiness: ThreeDSBusiness = ThreeDSBusiness()) {
 
-    lateinit var threeDS2Service : ThreeDS2Service
-
-    var isInitialized = false
+    internal var threeDS2Service : ThreeDS2Service? = null
+    internal var currentOnGoingThreeDsTransaction: Transaction? = null
+    internal var isInitialized = false
 
     companion object {
         const val TAG: String = "ThreeDSManager"
@@ -34,28 +45,13 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
     }
 
     /**
-     * Fonction qui permet d'afficher les Warning du SDK 3DS
+     * Focntion qui permet d'initialiser la configuration du SDK 3DS
      */
-    private fun loadWarnings() {
+    internal suspend fun startInitialize(sessionToken: String, cardCode: String) {
         try {
-            val warnings = threeDS2Service.warnings
-            for (warn in warnings) {
-                internalSDKContext.logger.w(TAG, " [3DS-WARN] => [${warn.severity}] - ${warn.message}")
-            }
-            // Handle warnings
-        } catch (e: SDKNotInitializedException) {
-            // ...
-            // TODO : Gérer les erreurs
-        }
-    }
+            val uiCustomization = ThreeDSUICustomization.createUICustomization(internalSDKContext)
 
-    suspend fun initialize(sessionToken: String, cardCode: String) {
-
-        try {
-            val uiCustomization =
-                ThreeDSUICustomization.createUICustomization(internalSDKContext)
-
-            val configurationBuilder = ThreeDSConfiguration.createConfigParameters()
+            val configurationBuilder = threeDSBusiness.createConfigParameters()
             completeSchemeConfiguration(configurationBuilder, cardCode, sessionToken)
 
             val configParameters: ConfigParameters = configurationBuilder.build()
@@ -66,8 +62,8 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
                 UiCustomization.UiCustomizationType.MONOCHROME to uiCustomization
             )
 
-            threeDS2Service = ThreeDS2ServiceInstance.get()
-            threeDS2Service.initialize(
+            threeDS2Service = getThreeDS2ServiceInstance()
+            threeDS2Service!!.initialize(
                 context,
                 configParameters,
                 locale,
@@ -106,6 +102,116 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
 
     }
 
+    internal fun getThreeDS2ServiceInstance(): ThreeDS2Service {
+        // Si le service est fournit pour les Tests, on le prends, sinon on récupère une instace via 'ThreeDS2ServiceInstance'
+        return threeDS2ServiceProvided ?: ThreeDS2ServiceInstance.get()
+    }
+
+    /**
+     * Fonction qui permet de collecter les donneés de context 3DS pour les envoyer côté Serveur
+     */
+    internal fun generateSDKContextData(cardType: String) : SdkContextData {
+        if(!isInitialized) {
+            throw ThreeDsException(ThreeDsExceptionType.NOT_INITIALISED, "Unable to generate 3DS Context")
+        }
+
+        try {
+            val directoryServerID : String = getDSIdForCardType(cardType)
+            currentOnGoingThreeDsTransaction = threeDS2Service!!.createTransaction(directoryServerID, ThreeDSConfiguration.MESSAGE_VERSION)
+
+            // Récupération des données du SDK 3DS
+            val authenticationRequestParameters = currentOnGoingThreeDsTransaction!!.authenticationRequestParameters
+            val ephemPubKey = transformDeviceData(authenticationRequestParameters.sdkEphemeralPublicKey)
+
+            return SdkContextData(
+                deviceRenderingOptionsIF= ThreeDSConfiguration.DEFAULT_DEVICE_RENDERING_OPTIONS_IF,
+                deviceRenderOptionsUI= ThreeDSConfiguration.DEFAULT_DEVICE_RENDER_OPTIONS_UI,
+                maxTimeout= ThreeDSConfiguration.MAX_TIMEOUT,
+                referenceNumber= authenticationRequestParameters.sdkReferenceNumber,
+                ephemPubKey= ephemPubKey,
+                appID= authenticationRequestParameters.sdkAppID,
+                transID= authenticationRequestParameters.sdkTransactionID,
+                encData= authenticationRequestParameters.deviceData
+            )
+
+        } catch (exception : Exception) {
+            throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR, "Unable to get contextData card type: $cardType", exception)
+        }
+    }
+
+    /**
+     * Fonction qui permet de déclencher le Challenge Flow
+     */
+    internal suspend fun doChallengeFlow(activity: Activity,
+                                         sdkChallengeData: SdkChallengeData,
+                                         theme: Appearance,
+                                         useCaseCallback: ChallengeUseCaseCallback) {
+        try {
+            if(!isInitialized || currentOnGoingThreeDsTransaction == null) {
+                throw ThreeDsException(ThreeDsExceptionType.NOT_INITIALISED, "Unable to start 3DS Challenge Flow")
+            }
+
+            val challengeParameters : ChallengeParameters = sdkChallengeData.toSdkChallengeParameters()
+            val challengeStatusReceiver : ChallengeStatusReceiver =
+                CustomChallengeStatusReceiver(
+                    logger = internalSDKContext.logger,
+                    sdkChallengeData = sdkChallengeData,
+                    useCaseCallback = useCaseCallback)
+
+            val timeOut = 10
+            val progressView = currentOnGoingThreeDsTransaction!!.getProgressView(activity)
+            progressView.showProgress()
+            delay(2000L)
+
+            currentOnGoingThreeDsTransaction!!.doChallenge(activity, challengeParameters, challengeStatusReceiver, timeOut);
+
+        } catch (exception : Exception) {
+            internalSDKContext.logger.e(TAG,"Unable to start 3DS Challenge Flow with threeDSServerTransID : $sdkChallengeData.threeDSServerTransID", exception)
+            // On appelle quand meme le service de paiement pour générer une TRS KO
+            useCaseCallback.onChallengeCompletion(sdkChallengeData.toAuthenticationResponse())
+        }
+    }
+
+    /**
+     * Close and cleanup 3DS context
+     */
+    internal fun closeTransaction() {
+        try {
+            if (currentOnGoingThreeDsTransaction != null) {
+                currentOnGoingThreeDsTransaction!!.close()
+                currentOnGoingThreeDsTransaction = null
+            }
+
+            if (threeDS2Service != null) {
+                threeDS2Service!!.cleanup(context)
+            }
+        } catch (exception : Exception) {
+            // Possible Exception lors du clean si le sdk n'est pas initialisé, mais ce n'est pas grave ici : SDKNotInitializedException
+            internalSDKContext.logger.e(TAG,"closeTransaction", exception)
+        }
+    }
+
+    /**
+     * Fonction qui permet de récupérer les schme pour la configuration du SDK 3DS.
+     * - Si Sandbox, on fait un appel server pour récupérer les Clé et intancier le bon scheme
+     * - Pour la PROD tout est fait dans le SDK...
+     */
+    @Throws(ThreeDsException::class)
+    private suspend fun completeSchemeConfiguration(configurationBuilder: ConfigurationBuilder, cardType: String, sessionToken: String) {
+        if (internalSDKContext.environment.isSandbox()) {
+            val schemesFromServer = fetchSchemesFromServer(sessionToken)
+            val valueToCheck = threeDSBusiness.convertValueIfCB(cardType)
+            val schemeConfiguration = schemesFromServer.find { it.schemeName.equals(valueToCheck, ignoreCase = true) }
+            if(schemeConfiguration == null) {
+                throw ThreeDsException(ThreeDsExceptionType.UNSUPPORTED_NETWORK, "Unable to find scheme for card type: $cardType")
+            }
+            configurationBuilder.configureScheme(schemeConfiguration)
+        } else {
+            val schemeForCardCode = getSchemeForCardCode(cardType)
+            configurationBuilder.configureScheme(schemeForCardCode)
+        }
+    }
+
     /**
      * Fonction qui permet de récupérer la liste des schemes à partir du serveur.
      * En SANDBOX uniquement.
@@ -118,25 +224,11 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
 
             if (SUPPORTED_CARD_TYPE.any {it.equals(key.scheme, ignoreCase = true)}) {
                 val schemeLogo = getSchemeLogo(key.scheme)
-                schemes.add(
-                    SchemeConfiguration.newSchemeConfiguration(convertValueIfCB(key.scheme))
-                        .ids(Collections.singletonList(key.rid))
-                        .encryptionPublicKey(key.publicKey, null)
-                        .rootPublicKey(key.rootPublicKey)
-                        .logo(schemeLogo)
-                        .build()
-                )
+                schemes.add(threeDSBusiness.createSchemeConfiguration(key, schemeLogo))
             }
         }
 
         return schemes
-    }
-
-    /**
-     * Fonction qui converti notre carType "CB" en "cartesBancaires" pour la compatibilité du SDK 3DS
-     */
-    private fun convertValueIfCB(value:String): String {
-        return if(value.equals("CB", ignoreCase = true)) "cartesBancaires" else value
     }
 
     /**
@@ -164,63 +256,8 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
         } as SchemeConfiguration
     }
 
-    /**
-     * Fonction qui permet de récupérer les schme pour la configuration du SDK 3DS.
-     * - Si Sandbox, on fait un appel server pour récupérer les Clé et intancier le bon scheme
-     * - Pour la PROD tout est fait dans le SDK...
-     */
-    @Throws(ThreeDsException::class)
-    suspend fun completeSchemeConfiguration(configurationBuilder: ConfigurationBuilder, cardType: String, sessionToken: String) {
-        if (internalSDKContext.environment.isSandbox()) {
-            val schemesFromServer = fetchSchemesFromServer(sessionToken)
-            val valueToCheck = convertValueIfCB(cardType)
-            val schemeConfiguration = schemesFromServer.find { it.schemeName == valueToCheck }
-            if(schemeConfiguration == null) {
-                throw ThreeDsException(ThreeDsExceptionType.UNSUPPORTED_NETWORK, "Unable to find scheme for card type: $cardType")
-            }
-            configurationBuilder.configureScheme(schemeConfiguration)
-        } else {
-            val schemeForCardCode = getSchemeForCardCode(cardType)
-            configurationBuilder.configureScheme(schemeForCardCode)
-        }
-    }
-
-
-    /**
-     * Fonction qui permet de collecter les donneés de context 3DS
-     */
-    fun generateSDKContextData(cardType: String) : SDKContextData {
-        if(!isInitialized) {
-            throw ThreeDsException(ThreeDsExceptionType.NOT_INITIALISED, "Unable to generate 3DS Context")
-        }
-
-        try {
-            val directoryServerID : String = getDSIdForCardType(cardType)
-            val transaction = threeDS2Service.createTransaction(directoryServerID, ThreeDSConfiguration.MESSAGE_VERSION)
-
-            val authenticationRequestParameters = transaction.authenticationRequestParameters
-            val ephemPubKey =
-                transformDeviceData(authenticationRequestParameters.sdkEphemeralPublicKey)
-
-            return SDKContextData(
-                deviceRenderingOptionsIF= ThreeDSConfiguration.DEFAULT_DEVICE_RENDERING_OPTIONS_IF,
-                deviceRenderOptionsUI= ThreeDSConfiguration.DEFAULT_DEVICE_RENDER_OPTIONS_UI,
-                maxTimeout= ThreeDSConfiguration.MAX_TIMEOUT,
-                referenceNumber= authenticationRequestParameters.sdkReferenceNumber,
-                ephemPubKey= ephemPubKey,
-                appID= authenticationRequestParameters.sdkAppID,
-                transID= authenticationRequestParameters.sdkTransactionID,
-                encData= authenticationRequestParameters.deviceData
-            )
-
-        } catch (exception : Exception) {
-            throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR, "Unable to get contextData card type: $cardType", exception)
-        }
-
-    }
-
     private fun getDSIdForCardType(cardType: String): String {
-        val schemeConfiguration = threeDS2Service.sdkInfo.schemeConfigurations.find { it.name == convertValueIfCB(cardType) }
+        val schemeConfiguration = threeDS2Service!!.sdkInfo.schemeConfigurations.find { it.name.equals(threeDSBusiness.convertValueIfCB(cardType), ignoreCase = true) }
         if(schemeConfiguration == null) {
             throw ThreeDsException(ThreeDsExceptionType.UNSUPPORTED_NETWORK, "Unable to find scheme for card type: $cardType")
         }
@@ -231,14 +268,18 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
         return dsId
     }
 
-    fun transformDeviceData(deviceData: String): String {
-        try {
-            val jwk = JSONObject(deviceData)
+    @JvmRecord
+    @Serializable
+    data class EphemeralKey(val kty: String, val crv: String, val x: String, val y: String)
 
-            val kty = jwk.optString("kty", "")
-            val crv = jwk.optString("crv", "")
-            val xCoord = jwk.optString("x", "")
-            val yCoord = jwk.optString("y", "")
+    private fun transformDeviceData(deviceData: String): String {
+        try {
+            val jwk = Json.decodeFromString<EphemeralKey>(deviceData)
+
+            val kty = jwk.kty
+            val crv = jwk.crv
+            val xCoord = jwk.x
+            val yCoord = jwk.y
 
             if (kty.isEmpty() || crv.isEmpty() || xCoord.isEmpty() || yCoord.isEmpty()) {
                 throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR, "Clés JWK manquantes (kty, crv, x, y)")
@@ -252,31 +293,31 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
             val yBase64 = yCoord.base64URLToBase64()
 
             val xData = try {
-                Base64.decode(xBase64, Base64.DEFAULT)
+                Base64.getDecoder().decode(xBase64)
             } catch (e: IllegalArgumentException) {
                 throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR,"Impossible de décoder la coordonnée x en base64", e)
             }
 
             val yData = try {
-                Base64.decode(yBase64, Base64.DEFAULT)
+                Base64.getDecoder().decode(yBase64)
             } catch (e: IllegalArgumentException) {
                 throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR,"Impossible de décoder la coordonnée y en base64", e)
             }
 
-            val xFinal = Base64.encodeToString(xData, Base64.NO_WRAP)
+            val xFinal = Base64.getEncoder().encodeToString(xData)
                 .replace("+", "-")
                 .replace("/", "_")
                 .replace("=", "")
 
-            val yFinal = Base64.encodeToString(yData, Base64.NO_WRAP)
+            val yFinal = Base64.getEncoder().encodeToString(yData)
                 .replace("+", "-")
                 .replace("/", "_")
                 .replace("=", "")
 
             return "$crv;$kty;$xFinal;$yFinal"
 
-        } catch (e: JSONException) {
-            throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR,"Format JSON invalide")
+        } catch (exception: JSONException) {
+            throw ThreeDsException(ThreeDsExceptionType.THREE_DS_KEY_ERROR,"Format JSON invalide", cause = exception)
         }
     }
 
@@ -293,10 +334,10 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
         return base64
     }
 
-    private fun displaySdkInfo() {
-        internalSDKContext.logger.d(TAG, "SDK License Expiry Date: ${threeDS2Service.sdkInfo.licenseExpiryDate}")
-        internalSDKContext.logger.d(TAG, "Supported Protocol Versions: ${threeDS2Service.sdkInfo.supportedProtocolVersions.joinToString(", ")}")
-        for (schemeInfo in threeDS2Service.sdkInfo.schemeConfigurations) {
+    internal fun displaySdkInfo() {
+        internalSDKContext.logger.d(TAG, "SDK License Expiry Date: ${threeDS2Service!!.sdkInfo.licenseExpiryDate}")
+        internalSDKContext.logger.d(TAG, "Supported Protocol Versions: ${threeDS2Service!!.sdkInfo.supportedProtocolVersions.joinToString(", ")}")
+        for (schemeInfo in threeDS2Service!!.sdkInfo.schemeConfigurations) {
             internalSDKContext.logger.d(TAG, "-------------------------------------------------------")
             internalSDKContext.logger.d(TAG, "Scheme: ${schemeInfo.name}")
             internalSDKContext.logger.d(TAG, "Scheme IDs: ${schemeInfo.ids}")
@@ -312,6 +353,21 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
             internalSDKContext.logger.d(TAG, "\t Valid Until: ${schemeInfo.encryptionCertificate.expiryDate}")
             internalSDKContext.logger.d(TAG, "\t ${schemeInfo.encryptionCertificate.certPrefix}")
             internalSDKContext.logger.d(TAG, "-------------------------------------------------------")
+        }
+    }
+
+    /**
+     * Fonction qui permet d'afficher les Warning du SDK 3DS
+     */
+    private fun loadWarnings() {
+        try {
+            val warnings = threeDS2Service!!.warnings
+            for (warn in warnings) {
+                internalSDKContext.logger.w(TAG, " [3DS-WARN] => [${warn.severity}] - ${warn.message}")
+            }
+            // Handle warnings
+        } catch (e: SDKNotInitializedException) {
+            // Pas d'erreur ici ...
         }
     }
 }
