@@ -1,7 +1,5 @@
 package com.monext.sdk
 
-import com.monext.sdk.internal.service.Logger
-
 /** Various fields used by the SDK */
 data class MnxtSDKConfiguration(
 
@@ -11,9 +9,4 @@ data class MnxtSDKConfiguration(
      * possible values: EN, FR
      */
     val language: String = "EN",
-
-    /**
-     * TODO:
-     */
-    val displayFinalState: Boolean = true
-)
+    )

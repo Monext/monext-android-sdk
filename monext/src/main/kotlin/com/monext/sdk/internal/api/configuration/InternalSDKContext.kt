@@ -14,5 +14,5 @@ class InternalSDKContext(sdkContext: MnxtSDKContext) {
     val environment: MnxtEnvironment = sdkContext.environment
     val config: MnxtSDKConfiguration = sdkContext.config
     val appearance: Appearance = sdkContext.appearance
-    val logger: Logger = CustomLogger()
+    var logger: Logger = CustomLogger()
 }

@@ -2,7 +2,6 @@ package com.monext.sdk.internal.presentation.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -15,16 +14,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -35,6 +33,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.monext.sdk.Appearance
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
 import com.monext.sdk.internal.data.Issuer
@@ -69,25 +68,7 @@ internal fun FormTextField(
 
     val interactionSource = remember { MutableInteractionSource() }
 
-    val colors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = if (useOnSurfaceStyle) theme.textfieldTextOnSurfaceColor else theme.textfieldTextColor,
-        unfocusedTextColor = if (useOnSurfaceStyle) theme.textfieldTextOnSurfaceColor else theme.textfieldTextColor,
-        errorTextColor = if (useOnSurfaceStyle) theme.textfieldTextOnSurfaceColor else theme.textfieldTextColor,
-
-        focusedContainerColor = if (useOnSurfaceStyle) theme.textfieldBackgroundOnSurfaceColor else theme.textfieldBackgroundColor,
-        unfocusedContainerColor = if (useOnSurfaceStyle) theme.textfieldBackgroundOnSurfaceColor else theme.textfieldBackgroundColor,
-        errorContainerColor = if (useOnSurfaceStyle) theme.textfieldBackgroundOnSurfaceColor else theme.textfieldBackgroundColor,
-
-        focusedBorderColor = if (useOnSurfaceStyle) theme.textfieldBorderSelectedOnSurfaceColor else theme.textfieldBorderSelectedColor,
-        unfocusedBorderColor = if (useOnSurfaceStyle) theme.textfieldBorderOnSurfaceColor else theme.textfieldBorderColor,
-        errorBorderColor = theme.errorColor,
-
-        focusedLabelColor = if (useOnSurfaceStyle) theme.textfieldBorderSelectedOnSurfaceColor else theme.textfieldBorderSelectedColor,
-        unfocusedLabelColor = if (useOnSurfaceStyle) theme.textfieldLabelOnSurfaceColor else theme.textfieldLabelColor,
-        errorLabelColor = theme.errorColor,
-    )
-
-//    val keyboard = LocalSoftwareKeyboardController.current
+    val colors = getColors(useOnSurfaceStyle, theme)
 
     val visualTransformation = VisualTransformation {
         TransformedText(
@@ -101,99 +82,79 @@ internal fun FormTextField(
     val formTextStyle = theme.baseTextStyle.copy(letterSpacing = 3.sp)
         .foreground(colors.focusedTextColor)
     val formTextSize = 20.sp
-//    var resizedTextSize by remember { mutableStateOf(formTextSize) }
-//    var extraPadding by remember { mutableFloatStateOf(0f) }
 
-//    BoxWithConstraints {
-
-//        val outer = this
-//        val maxInputWidth = outer.maxWidth - 32.dp
-//        val maxInputWidthPx = with(LocalDensity.current) { maxInputWidth.toPx() }
-
-        BasicTextField(
-            value = text,
-            onValueChange = { text ->
-                val sanitized = assistant.sanitizer.sanitize(text)
-                val limited = assistant.charLimit?.let {
-                    sanitized.take(it)
-                } ?: sanitized
-                onTextChanged(limited)
+    BasicTextField(
+        value = text,
+        onValueChange = { text ->
+            val sanitized = assistant.sanitizer.sanitize(text)
+            val limited = assistant.charLimit?.let {
+                sanitized.take(it)
+            } ?: sanitized
+            onTextChanged(limited)
+        },
+        modifier = modifier
+            .onFocusChanged {
+                isFocused = it.isFocused
+                errorMessage = if (!isFocused && text.isNotBlank()) {
+                    assistant.validator?.validate(text, issuer)?.errorMessage(context)
+                } else {
+                    null
+                }
             },
-            modifier = modifier
-                .onFocusChanged {
-                    isFocused = it.isFocused
-                    errorMessage = if (!isFocused && text.isNotBlank()) {
-                        assistant.validator?.validate(text, issuer)?.errorMessage(context)
-                    } else {
-                        null
+        textStyle = formTextStyle.copy(fontSize = formTextSize),//.copy(fontSize = resizedTextSize),
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+
+        singleLine = true,
+        visualTransformation = visualTransformation,
+
+        interactionSource = interactionSource,
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = text,
+                innerTextField = innerTextField,
+                enabled = true,
+                singleLine = true,
+                visualTransformation = visualTransformation,
+                interactionSource = interactionSource,
+                isError = isError,
+                label = {
+                    Text(labelText, style = theme.baseTextStyle.s12())
+                },
+                trailingIcon = if (showsAccessory) {
+                    {
+
+                        IconButton({ showInfoDialog = true }) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = if (useOnSurfaceStyle) theme.textfieldAccessoryOnSurfaceColor else theme.textfieldAccessoryColor
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+                supportingText = {
+                    errorMessage?.let {
+                        Text(it, style = theme.baseTextStyle.s12())
                     }
                 },
-            textStyle = formTextStyle.copy(fontSize = formTextSize),//.copy(fontSize = resizedTextSize),
-            keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions,
-//            keyboardActions = KeyboardActions(onAny = {
-//                keyboard?.hide()
-//            }),
-            singleLine = true,
-            visualTransformation = visualTransformation,
-//            onTextLayout = { textLayoutResult ->
-//                if (textLayoutResult.size.width > (maxInputWidthPx - extraPadding)) {
-//                    resizedTextSize *= 0.9
-//                }
-//            },
-            interactionSource = interactionSource,
-            decorationBox = { innerTextField ->
-                OutlinedTextFieldDefaults.DecorationBox(
-                    value = text,
-                    innerTextField = innerTextField,
-                    enabled = true,
-                    singleLine = true,
-                    visualTransformation = visualTransformation,
-                    interactionSource = interactionSource,
-                    isError = isError,
-                    label = {
-                        Text(labelText, style = theme.baseTextStyle.s12())
-                    },
-                    trailingIcon = if (showsAccessory) {
-                        {
-//                            BoxWithConstraints {
-//                                val inner = this
-//                                val paddingPx = with(LocalDensity.current) { inner.maxWidth.toPx() }
-//                                extraPadding = paddingPx
-                                IconButton({ showInfoDialog = true }) {
-                                    Icon(
-                                        Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = if (useOnSurfaceStyle) theme.textfieldAccessoryOnSurfaceColor else theme.textfieldAccessoryColor
-                                    )
-                                }
-//                            }
-                        }
-                    } else {
-//                        extraPadding = 0f
-                        null
-                    },
-                    supportingText = {
-                        errorMessage?.let {
-                            Text(it, style = theme.baseTextStyle.s12())
-                        }
-                    },
-                    colors = colors,
-                    container = {
-                        OutlinedTextFieldDefaults.Container(
-                            enabled = true,
-                            isError = isError,
-                            interactionSource = interactionSource,
-                            colors = colors,
-                            shape = RoundedCornerShape(theme.cardRadius),
-                            focusedBorderThickness = 2.dp,
-                            unfocusedBorderThickness = 1.dp
-                        )
-                    }
-                )
-            }
-        )
-//    }
+                colors = colors,
+                container = {
+                    OutlinedTextFieldDefaults.Container(
+                        enabled = true,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        shape = RoundedCornerShape(theme.cardRadius),
+                        focusedBorderThickness = 2.dp,
+                        unfocusedBorderThickness = 1.dp
+                    )
+                }
+            )
+        }
+    )
 
     if (showInfoDialog) {
         NoActionDialog(
@@ -204,6 +165,28 @@ internal fun FormTextField(
         }
     }
 }
+
+@Composable
+private fun getColors(
+    useOnSurfaceStyle: Boolean,
+    theme: Appearance
+): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = if (useOnSurfaceStyle) theme.textfieldTextOnSurfaceColor else theme.textfieldTextColor,
+    unfocusedTextColor = if (useOnSurfaceStyle) theme.textfieldTextOnSurfaceColor else theme.textfieldTextColor,
+    errorTextColor = if (useOnSurfaceStyle) theme.textfieldTextOnSurfaceColor else theme.textfieldTextColor,
+
+    focusedContainerColor = if (useOnSurfaceStyle) theme.textfieldBackgroundOnSurfaceColor else theme.textfieldBackgroundColor,
+    unfocusedContainerColor = if (useOnSurfaceStyle) theme.textfieldBackgroundOnSurfaceColor else theme.textfieldBackgroundColor,
+    errorContainerColor = if (useOnSurfaceStyle) theme.textfieldBackgroundOnSurfaceColor else theme.textfieldBackgroundColor,
+
+    focusedBorderColor = if (useOnSurfaceStyle) theme.textfieldBorderSelectedOnSurfaceColor else theme.textfieldBorderSelectedColor,
+    unfocusedBorderColor = if (useOnSurfaceStyle) theme.textfieldBorderOnSurfaceColor else theme.textfieldBorderColor,
+    errorBorderColor = theme.errorColor,
+
+    focusedLabelColor = if (useOnSurfaceStyle) theme.textfieldBorderSelectedOnSurfaceColor else theme.textfieldBorderSelectedColor,
+    unfocusedLabelColor = if (useOnSurfaceStyle) theme.textfieldLabelOnSurfaceColor else theme.textfieldLabelColor,
+    errorLabelColor = theme.errorColor,
+)
 
 @Preview
 @Composable

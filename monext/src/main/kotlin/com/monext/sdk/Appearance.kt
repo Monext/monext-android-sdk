@@ -216,8 +216,8 @@ class Appearance(
     // region Internal
 
     internal companion object {
-        internal val cardNetworkFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMyy") //SimpleDateFormat("MMyy", Locale.US)
-        internal val cardPresentationFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MM / yy") //SimpleDateFormat("MM / yy", Locale.US)
+        internal val cardNetworkFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMyy")
+        internal val cardPresentationFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MM / yy")
     }
 
     // endregion

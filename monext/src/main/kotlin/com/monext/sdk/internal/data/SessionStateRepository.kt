@@ -1,8 +1,8 @@
 package com.monext.sdk.internal.data
 
-import android.net.Uri
-import android.util.Log
+import android.app.Activity
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.monext.sdk.Appearance
 import com.monext.sdk.internal.api.AvailableCardNetworksRequest
 import com.monext.sdk.internal.api.AvailableCardNetworksResponse
 import com.monext.sdk.internal.api.PaymentAPI
@@ -12,8 +12,12 @@ import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
 import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.threeds.ThreeDSManager
+import com.monext.sdk.internal.threeds.model.AuthenticationResponse
+import com.monext.sdk.internal.threeds.model.ChallengeUseCaseCallback
+import com.monext.sdk.internal.threeds.model.SdkChallengeData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.net.URI
 
 internal class SessionStateRepository(
     private val paymentAPI: PaymentAPI,
@@ -25,11 +29,7 @@ internal class SessionStateRepository(
 
     private var token: String? = null
 
-    val returnURLString = Uri.Builder()
-        .scheme("https")
-        .authority(internalSDKContext.environment.host)
-        .build()
-        .toString()
+    val returnURLString = URI("https", internalSDKContext.environment.host, null).toString()
 
     suspend fun initializeSessionState(token: String) {
         if (this.token == token) return
@@ -82,32 +82,57 @@ internal class SessionStateRepository(
         }
     }
 
+    suspend fun makeSdkPayment(params: AuthenticationResponse) {
+        makeRequest {
+            val token = token ?: throw INVALID_TOKEN_EXCEPTION
+            paymentAPI.sdkPaymentRequest(token, params)
+        }
+    }
+
+    /**
+     * Lance le flow Challenge
+     */
+    suspend fun makeThreeDsChallengeFlow(
+        activity: Activity,
+        sdkChallengeData: SdkChallengeData,
+        theme: Appearance,
+        useCaseCallback: ChallengeUseCaseCallback) {
+
+        threeDSManager.doChallengeFlow(activity, sdkChallengeData, theme, object: ChallengeUseCaseCallback {
+            override fun onChallengeCompletion(authenticationResponse: AuthenticationResponse) {
+                // Le challenge est terminé, on close la transation
+                threeDSManager.closeTransaction()
+                // On appelle la callback pour la suite du traitement.
+                useCaseCallback.onChallengeCompletion(authenticationResponse)
+            }
+        })
+    }
+
     suspend fun availableCardNetworks(params: AvailableCardNetworksRequest): AvailableCardNetworksResponse? {
         return try {
             val token = token ?: throw INVALID_TOKEN_EXCEPTION
             paymentAPI.availableCardNetworks(token, params)
         } catch (t: Throwable) {
-            Log.d("NETWORK", "==> availableCardNetworks")
-            Log.e("NETWORK", t.localizedMessage ?: "unknown error", t)
+            internalSDKContext.logger.e(TAG, "error when call availableCardNetworks ${t.localizedMessage ?: "unknown error"}", t)
             null
         }
     }
 
-    private suspend fun makeRequest(yield: suspend () -> SessionState) {
+    private suspend fun makeRequest(callback: suspend () -> SessionState) {
         try {
-            animateSessionStateChange(yield())
+            animateSessionStateChange(callback())
         } catch (t: Throwable) {
-            Log.d("NETWORK", "==> makeRequest")
-            Log.e("NETWORK", t.localizedMessage ?: "unknown error", t)
+            internalSDKContext.logger.e(TAG, "error when call makeRequest ${t.localizedMessage ?: "unknown error"}", t)
         }
     }
 
-    private fun animateSessionStateChange(sState: SessionState) {
+    protected fun animateSessionStateChange(sState: SessionState) {
         _sessionState.value = sState
     }
 
     companion object {
         val INVALID_TOKEN_EXCEPTION = RuntimeException("invalid token")
+        const val TAG = "SessionStateRepo"
     }
 }
 

@@ -9,12 +9,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.monext.sdk.Appearance
 import com.monext.sdk.FakeTestActivity
 import com.monext.sdk.LocalAppearance
+import com.monext.sdk.PaymentOverlayToggle
 import com.monext.sdk.PaymentResult
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
 import com.monext.sdk.internal.presentation.PaymentContainer
 import com.monext.sdk.internal.preview.PreviewSamples.Companion.buildSessionState
-
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -27,11 +27,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PaymentContainerTest {
 
+    private val stateHistory = mutableListOf<PaymentOverlayToggle>()
+
     @Before
     fun setup() {
         // Désactiver StrictMode pour les tests
         StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.LAX)
         StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX)
+        stateHistory.clear()
     }
     @get:Rule
     val composeTestRule = createAndroidComposeRule<FakeTestActivity>()
@@ -90,8 +93,9 @@ class PaymentContainerTest {
 
     private fun executeSessionStateTest(sessionState: SessionState, expectedTransactionState: PaymentResult.TransactionState, expectedTag : String) {
         var paymentResult: PaymentResult? = null
-        var showingChange: Boolean = true
+        var showingChange = true
         composeTestRule.activity.setTestComposable {
+
             CompositionLocalProvider(LocalAppearance provides appearance) {
                 PaymentContainer(
                     sessionState,
@@ -102,8 +106,9 @@ class PaymentContainerTest {
                         paymentResult = result
                     },
                     {
-                        result -> showingChange = result
-                    })
+                            result -> showingChange = result
+                    }
+                ) { state -> stateHistory.add(state) }
             }
         }
 

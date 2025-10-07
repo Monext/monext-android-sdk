@@ -6,7 +6,6 @@ on:
   push:
     branches: [ main, develop ]
     # Se déclenche aussi lors de la création d'un tag commençant par 'v' (ex: v1.0.0)
-    # C'est ce qui déclenchera la publication de votre SDK
     tags:
       - 'v*'
   # Se déclenche lors de l'ouverture ou mise à jour d'une Pull Request
@@ -15,7 +14,7 @@ on:
 
 # VARIABLES GLOBALES - Utilisées dans tous les jobs
 env:
-  ANDROID_COMPILE_SDK: "34"  # Android 14
+  ANDROID_COMPILE_SDK: "34"
   ANDROID_BUILD_TOOLS: "34.0.0"
   ANDROID_SDK_TOOLS: "11076708"  # Version des outils de ligne de commande Android
   JDK_DISTRIBUTION: 'temurin'    # Distribution OpenJDK
@@ -62,14 +61,7 @@ jobs:
       # ============================================
       # Tests unitaires ET génération du rapport JaCoCo
       - name: Run unit tests with coverage
-        run: |
-          ./gradlew testDebugUnitTest --stacktrace
-          ./gradlew jacocoTestReport --stacktrace
-          echo "Coverage report generated at: monext/build/reports/jacoco/jacocoTestReport/"
-        #env:
-          # Injecte la clé API depuis les secrets GitHub
-          # Cette variable sera accessible dans BuildConfig
-         # THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+        run: ./gradlew testDebugUnitTest --stacktrace
 
       # Sauvegarde les rapports de tests même si les tests échouent
       - name: Upload unit test results
@@ -80,6 +72,7 @@ jobs:
           path: |
             **/build/reports/tests/
             **/build/reports/jacoco/
+            **/build/outputs/unit_test_code_coverage/
 
       # ============================================
       # TESTS Android
@@ -90,6 +83,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Tests d'instrumentation sur émulateur
       - name: Start emulator and run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -102,9 +96,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true  # Désactive les animations pour accélérer les tests
           # Commande à exécuter une fois l'émulateur démarré
-          script: ./gradlew connectedAndroidTest --stacktrace
-        #env:
-          #THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+          script: ./gradlew createDebugCoverageReport --stacktrace
 
       # Sauvegarde les résultats des tests instrumentés
       - name: Upload instrumented test results
@@ -112,7 +104,23 @@ jobs:
         if: always()
         with:
           name: instrumented-test-results
-          path: '**/build/reports/androidTests/'
+          path: |
+            **/build/reports/androidTests/
+            **/build/reports/coverage/
+            **/build/outputs/code_coverage/
+
+      # Genere un rapport qui combine les TU et les AndroidTest
+      - name: Generate unified coverage report
+        run: |
+          ./gradlew jacocoTestReport --stacktrace
+          echo "Coverage report generated at: monext/build/reports/jacoco/jacocoTestReport/"
+
+      - name: Upload JaCoCo report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report
+          path: '**/build/reports/jacoco/'
 
   # ============================================
   # ANALYSE SONARCLOUD
@@ -148,13 +156,19 @@ jobs:
       - name: Download test artifacts
         uses: actions/download-artifact@v4
         with:
-          name: unit-test-results
+          path: build-artifacts
 
-      # Vérifie que le fichier de coverage existe
+      - name: Restore coverage files
+        run: |
+          cp -r build-artifacts/jacoco-report/* ./ 2>/dev/null || true
+          cp -r build-artifacts/unit-test-results/* ./ 2>/dev/null || true
+          cp -r build-artifacts/instrumented-test-results/* ./ 2>/dev/null || true
+
       - name: Check coverage report
         run: |
           echo "Checking for coverage files..."
           find . -name "*.exec" -type f
+          find . -name "*.ec" -type f
           find . -name "jacocoTestReport.xml" -type f
 
       # Build minimal puis Sonar (pas de re-test)
@@ -165,3 +179,226 @@ jobs:
         run: |
           ./gradlew assemble --stacktrace
           ./gradlew sonar --info -x test -x testDebugUnitTest
+
+
+
+
+#
+#  # ============================================
+#  # BUILD ET PUBLICATION DU SDK
+#  # ============================================
+#  build-and-publish:
+#    name: Build and Publish SDK
+#    runs-on: ubuntu-latest
+#    needs: [test, sonarcloud]
+#  #    branches: [ main, develop ] # TODO : A tester
+#    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v'))
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Set up JDK
+#        uses: actions/setup-java@v4
+#        with:
+#          distribution: ${{ env.JDK_DISTRIBUTION }}
+#          java-version: ${{ env.JDK_VERSION }}
+#          cache: 'gradle'
+#
+#      - name: Setup Android SDK
+#        uses: android-actions/setup-android@v3
+#        with:
+#          cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
+#
+#      - name: Retrieve Version
+#        run: echo "VERSION_NAME=$(${{github.workspace}}/gradlew -q :monext:printVersion)" >> $GITHUB_ENV
+##        run: |
+##          echo "::set-output name=VERSION_NAME::$(${{github.workspace}}/gradlew -q :monext:printVersion)"
+#
+#      - name: Decode and save keystore
+#        if: startsWith(github.ref, 'refs/tags/v')
+#        env:
+#          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+#        run: |
+#          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/keystore.jks
+#
+#      - name: Extract version from tag
+#        if: startsWith(github.ref, 'refs/tags/v')
+#        id: get_version
+#        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+#
+#      - name: Build Release AAR
+#        run: ./gradlew :monext:assembleRelease
+#        env:
+#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+#          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+#          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+#          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+#          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+#          SDK_VERSION: ${{ env.VERSION_NAME }}
+##          SDK_VERSION: ${{ steps.get_version.outputs.VERSION }}
+#
+#      - name: Generate documentation
+#        run: ./gradlew :monext:dokkaHtml
+#
+#      - name: Upload AAR artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: sdk-aar
+#          path: monext/build/outputs/aar/*.aar
+#
+#      # Publication sur Maven Central
+#      - name: Publish to Maven Central
+#        if: startsWith(github.ref, 'refs/tags/v')
+#        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
+#        env:
+#          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+#          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+#          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+#          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+#          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+#
+#      # Publication sur GitHub Packages
+#      - name: Publish to GitHub Packages
+#        if: startsWith(github.ref, 'refs/tags/v')
+#        run: ./gradlew :monext:publishReleasePublicationToGitHubPackagesRepository
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+#
+#      - name: Create GitHub Release
+#        if: startsWith(github.ref, 'refs/tags/v')
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: |
+#            monext/build/outputs/aar/*.aar
+#            CHANGELOG.md
+#          generate_release_notes: true
+#          draft: true
+#          prerelease: false
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # NOTIFICATIONS Teams
+  # ============================================
+  notify:
+    name: Teams Notification
+    runs-on: ubuntu-latest
+    #needs: [build-and-publish]
+    if:
+      contains('
+      refs/heads/main
+      refs/heads/master
+      refs/heads/develop
+      refs/heads/release
+      ', github.ref)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Retrieve Version
+        id: get_version
+        run: |
+          VERSION_NAME=$(./gradlew -q :monext:printVersion | tail -n 1 | tr -d '\n\r')
+          VERSION_CODE=$(./gradlew -q :monext:printVersionCode | tail -n 1 | tr -d '\n\r')
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
+          echo "Version retrieved: ${VERSION_NAME} (${VERSION_CODE})"
+
+      - name: Send Teams Notification
+        if: always()
+        run: |
+          ICON_COLOR="${{ job.status == 'success' && 'Good' || 'attention' }}"
+          ICON="${{ job.status == 'success' && 'CheckmarkStarburst' || 'DismissCircle' }}"
+          STATUS_TEXT="${{ job.status }}"
+
+          curl -X POST "${{ secrets.TEAMS_WEBHOOK_URL_DEVTEAM }}" \
+               -H "Content-Type: application/json" \
+               -d @- << EOF
+          {
+            "type": "message",
+            "attachments": [
+              {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentUrl": null,
+                "content": {
+                  "type": "AdaptiveCard",
+                  "\$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                  "version": "1.4",
+                  "body": [
+                    {
+                      "type": "ColumnSet",
+                      "columns": [
+                        {
+                          "type": "Column",
+                          "width": "auto",
+                          "height": "stretch",
+                          "items": [
+                            {
+                              "type": "Icon",
+                              "name": "${ICON}",
+                              "style": "Filled",
+                              "color": "${ICON_COLOR}"
+                            }
+                          ],
+                          "spacing": "None"
+                        },
+                        {
+                          "type": "Column",
+                          "width": "stretch",
+                          "items": [
+                            {
+                              "type": "TextBlock",
+                              "text": "Publication **SDK Android** - ${STATUS_TEXT}",
+                              "wrap": true,
+                              "size": "Large",
+                              "weight": "Bolder"
+                            }
+                          ],
+                          "spacing": "Small"
+                        }
+                      ],
+                      "spacing": "None"
+                    },
+                    {
+                      "type": "TextBlock",
+                      "text": "_version ${{env.VERSION_NAME}} (build ${{env.VERSION_CODE}})_",
+                      "wrap": true,
+                      "isSubtle": true,
+                      "spacing": "Small"
+                    },
+                    {
+                      "type": "FactSet",
+                      "facts": [
+                        {
+                          "title": "Repository:",
+                          "value": "${{ github.repository }}"
+                        },
+                        {
+                          "title": "Branch/Tag:",
+                          "value": "${{ github.HEAD_REF }}"
+                        },
+                        {
+                          "title": "Auteur:",
+                          "value": "${{ github.actor }}"
+                        }
+                      ],
+                      "separator": true
+                    }
+                  ],
+                  "actions": [
+                    {
+                      "type": "Action.OpenUrl",
+                      "title": "Voir le build",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+          EOF

@@ -7,6 +7,7 @@ import com.monext.sdk.internal.data.sessionstate.PaymentRedirectNoResponse
 import com.monext.sdk.internal.data.sessionstate.PaymentSuccess
 import com.monext.sdk.internal.api.model.PointOfSaleAddress
 import com.monext.sdk.internal.api.model.SessionInfo
+import com.monext.sdk.internal.threeds.model.PaymentSdkChallenge
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -31,7 +32,8 @@ internal data class SessionState(
     val paymentMethodsList: PaymentMethodsList? = null,
     val paymentRedirectNoResponse: PaymentRedirectNoResponse? = null,
     val paymentSuccess: PaymentSuccess? = null,
-    val paymentFailure: PaymentFailure? = null
+    val paymentFailure: PaymentFailure? = null,
+    val paymentSdkChallenge: PaymentSdkChallenge? = null
 )
 
 @Serializable(with = SessionStateTypeSerializer::class)
@@ -44,12 +46,13 @@ internal enum class SessionStateType {
     PAYMENT_FAILURE_WITH_RETRY,
     PAYMENT_CANCELED,
     TOKEN_EXPIRED,
+    SDK_CHALLENGE,
 
     UNKNOWN;
 
     fun toTransactionState(): PaymentResult.TransactionState? =
         when (this) {
-            PAYMENT_METHODS_LIST, PAYMENT_REDIRECT_NO_RESPONSE -> PaymentResult.TransactionState.PAYMENT_INCOMPLETE
+            PAYMENT_METHODS_LIST, PAYMENT_REDIRECT_NO_RESPONSE, SDK_CHALLENGE -> PaymentResult.TransactionState.PAYMENT_INCOMPLETE
             PAYMENT_SUCCESS -> PaymentResult.TransactionState.PAYMENT_SUCCESS
             PAYMENT_FAILURE, PAYMENT_FAILURE_WITH_RETRY -> PaymentResult.TransactionState.PAYMENT_FAILURE
             PAYMENT_CANCELED -> PaymentResult.TransactionState.PAYMENT_CANCELED
