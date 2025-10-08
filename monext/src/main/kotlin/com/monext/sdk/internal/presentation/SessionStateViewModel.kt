@@ -160,31 +160,15 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         val pmData = paymentMethod.data ?: return
 
         val cardType = formData.cardNetwork?.network?.name ?: cardCode.name
+        val paymentParams = formData.paymentParams()
 
-        // Si le 3DS est déjà initialisé, on le close pour le ré-init
-        if(sessionStateRepository.threeDSManager.isInitialized) {
-            sessionStateRepository.threeDSManager.closeTransaction()
-        }
-
-        // A garder car doit etre executé dans une coroutine
-        withContext(dispatcher) {
-            // Blocking network request code
-            sessionStateRepository.threeDSManager.startInitialize(
-                sessionToken = sessionState.value!!.token,
-                cardCode = cardType
-            )
-        }
-
-        val sdkContextData: SdkContextData =
-            sessionStateRepository.threeDSManager.generateSDKContextData(cardType)
+        paymentParams.sdkContextData = initializeAndGetThreeDSData(cardType)
 
         val displayMetrics = context.resources.displayMetrics
         val timeZone = TimeZone.getDefault()
         val millisecondsOffset = timeZone.getOffset(Date().time)
         val minutesOffset = TimeUnit.MILLISECONDS.toSeconds(millisecondsOffset.toLong()).toInt()
 
-        val paymentParams = formData.paymentParams()
-        paymentParams.sdkContextData = json.encodeToString(sdkContextData)
 
         val params = SecuredPaymentRequest(
             cardCode = cardCode.name,
@@ -211,6 +195,29 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
     }
 
     /**
+     * Fonction qui permet de faire l'initialization du SDK 3DS et de récupérer les informations de context
+     */
+    private suspend fun initializeAndGetThreeDSData(cardType: String): String {
+        // Si le 3DS est déjà initialisé, on le close pour le ré-init
+        if (sessionStateRepository.threeDSManager.isInitialized) {
+            sessionStateRepository.threeDSManager.closeTransaction()
+        }
+
+        // A garder car doit etre executé dans une coroutine
+        withContext(dispatcher) {
+            // Blocking network request code
+            sessionStateRepository.threeDSManager.startInitialize(
+                sessionToken = sessionState.value!!.token,
+                cardCode = cardType
+            )
+        }
+
+        val sdkContextData: SdkContextData =
+            sessionStateRepository.threeDSManager.generateSDKContextData(cardType)
+        return json.encodeToString(sdkContextData)
+    }
+
+    /**
      * Fonction qui permet de traiter les paiements (autre que Carte)
      */
     private suspend fun makePaymentMethodPayment(selectedPaymentMethod: PaymentMethod?, paymentFormData: FormData?, showOverlay: (PaymentOverlayToggle) -> Unit) {
@@ -233,20 +240,25 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         showOverlay(PaymentOverlayToggle.off())
     }
 
-    private suspend fun makeWalletPayment(selectedWallet: Wallet?, walletFormData: FormData.Wallet?, showOverlay: (PaymentOverlayToggle) -> Unit) {
-
+    internal suspend fun makeWalletPayment(selectedWallet: Wallet?, walletFormData: FormData.Wallet?, showOverlay: (PaymentOverlayToggle) -> Unit) {
         val selectedWallet = selectedWallet ?: return
         val walletData = walletFormData ?: return
+        val walletCardType = selectedWallet.cardType
+
+        val paymentParams = walletFormData.paymentParams()
+        // Récupération des données 3DS
+        paymentParams.sdkContextData = initializeAndGetThreeDSData(walletCardType.name)
 
         val params = WalletPaymentRequest(
             cardCode = selectedWallet.cardCode,
             index = selectedWallet.index,
             isEmbeddedRedirectionAllowed = true,
             merchantReturnUrl = sessionStateRepository.returnURLString,
+            paymentParams = paymentParams,
             securedPaymentParams = walletData.securedPaymentParams()
         )
 
-        showOverlay(PaymentOverlayToggle.on(selectedWallet.cardType))
+        showOverlay(PaymentOverlayToggle.on(walletCardType))
         sessionStateRepository.makeWalletPayment(params)
         showOverlay(PaymentOverlayToggle.off())
     }

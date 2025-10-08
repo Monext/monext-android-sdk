@@ -9,5 +9,6 @@ internal data class WalletPaymentRequest(
     val index: Int,
     val isEmbeddedRedirectionAllowed: Boolean,
     val merchantReturnUrl: String,
+    val paymentParams: PaymentParams,
     val securedPaymentParams: SecuredPaymentParams
 )
