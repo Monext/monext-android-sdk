@@ -5,18 +5,25 @@ import android.content.Context
 import com.monext.sdk.SdkTestHelper
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
+import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.data.SessionStateRepository
 import com.monext.sdk.internal.preview.PreviewSamples
 import com.monext.sdk.internal.threeds.ThreeDSManager
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.slot
+import io.mockk.spyk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -24,60 +31,71 @@ import org.junit.jupiter.api.extension.ExtendWith
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MockKExtension::class)
 class SessionStateViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
     @RelaxedMockK
-    internal lateinit var sessionStateRepository: SessionStateRepository
+    internal lateinit var sessionStateRepositoryMock: SessionStateRepository
     @RelaxedMockK
-    internal lateinit var app: Application
+    internal lateinit var appMock: Application
 
     @RelaxedMockK
-    private lateinit var context: Context
+    private lateinit var contextMock: Context
     @RelaxedMockK
-    internal lateinit var threeDSManager: ThreeDSManager
+    internal lateinit var threeDSManagerMock: ThreeDSManager
 
     internal val captureSecuredPaymentRequest = slot<SecuredPaymentRequest>()
+    internal val captureWalletPaymentRequest = slot<WalletPaymentRequest>()
 
     internal var internalSDKContext: InternalSDKContext = SdkTestHelper.createInternalSDKContext()
 
     internal lateinit var underTest: SessionStateViewModel
+    internal val sessionStateFlow = MutableStateFlow<SessionState?>(null)
 
     @BeforeEach
     fun setUp() {
-        underTest = SessionStateViewModel(sessionStateRepository, app, dispatcher = testDispatcher)
+        every { sessionStateRepositoryMock.sessionState } returns sessionStateFlow
+        every { sessionStateRepositoryMock.threeDSManager } returns threeDSManagerMock
+        every { sessionStateRepositoryMock.internalSDKContext } returns internalSDKContext
 
-        every { underTest.sessionStateRepository.threeDSManager } returns threeDSManager
-        every { underTest.sessionStateRepository.internalSDKContext } returns internalSDKContext
+        underTest = spyk(SessionStateViewModel(sessionStateRepositoryMock, appMock, dispatcher = testDispatcher))
     }
 
     @Test
-    fun makePaymentShouldMakeCardPayment() = runTest(testDispatcher) {
+    fun makeCardPaymentShouldMakeCardPaymentWithThreeDsContextData() = runTest(testDispatcher) {
         // Data
         val paymentAttemptCB = SdkTestHelper.createPaymentAttemptCB()
         var isFinish = false;
-        val paymentMethodList = PreviewSamples.sessionStatePaymentMethodsList
         val cardType = "CB"
         val sdkContextData = SdkTestHelper.createSdkContextData()
+        val paymentMethodList = PreviewSamples.sessionStatePaymentMethodsList
+        sessionStateFlow.value = paymentMethodList
 
         // Mock
-        every { underTest.sessionStateRepository.sessionState } returns MutableStateFlow<SessionState?>(paymentMethodList)
-        every { threeDSManager.isInitialized } returns false
-        every { threeDSManager.generateSDKContextData(cardType) } returns sdkContextData
+        every { threeDSManagerMock.isInitialized } returns false
+        every { threeDSManagerMock.generateSDKContextData(cardType) } returns sdkContextData
 
-        // Test
-        underTest.makeCardPayment(paymentAttemptCB.paymentFormData, context = context) {
-            isFinish = true;
+
+        launch {
+            // Test
+            underTest.makeCardPayment(paymentAttemptCB.paymentFormData, context = contextMock) {
+                isFinish = true;
+            }
         }
+
+        // On attends les coroutines
+        advanceUntilIdle()
+
 
         // Verif
         assertTrue { isFinish }
 
-        coVerify { threeDSManager.startInitialize("fake_token", cardType) }
-        coVerify { threeDSManager.generateSDKContextData(cardType) }
-        coVerify { sessionStateRepository.makeSecuredPayment(params = capture(captureSecuredPaymentRequest)) }
+        coVerify { threeDSManagerMock.startInitialize("fake_token", cardType) }
+        coVerify { threeDSManagerMock.generateSDKContextData(cardType) }
+        coVerify { sessionStateRepositoryMock.makeSecuredPayment(params = capture(captureSecuredPaymentRequest)) }
 
         assertEquals("CB", captureSecuredPaymentRequest.captured.cardCode)
         assertEquals("CB_01", captureSecuredPaymentRequest.captured.contractNumber)
@@ -93,6 +111,89 @@ class SessionStateViewModelTest {
         // SecuredParams
         assertEquals("4970100000000000", captureSecuredPaymentRequest.captured.securedPaymentParams.pan)
         assertEquals("123", captureSecuredPaymentRequest.captured.securedPaymentParams.cvv)
+    }
+
+    @Test
+    fun makeWalletPaymentShouldMakeCardPaymentWithThreeDsContextData() = runTest(testDispatcher) {
+        // Data
+        val wallet = SdkTestHelper.createWallet()
+        val walletFormData = SdkTestHelper.createWalletFormData()
+        var isFinish = false;
+        val cardType = "CB"
+        val sdkContextData = SdkTestHelper.createSdkContextData()
+        val paymentMethodList = PreviewSamples.sessionStatePaymentMethodsList
+        sessionStateFlow.value = paymentMethodList
+
+        // Mock
+        every { threeDSManagerMock.isInitialized } returns true
+        every { threeDSManagerMock.generateSDKContextData(cardType) } returns sdkContextData
+
+        // Test
+        launch {
+            // Test
+            underTest.makeWalletPayment(selectedWallet = wallet,walletFormData = walletFormData) {
+                isFinish = true;
+            }
+        }
+
+        // On attends les coroutines
+        advanceUntilIdle()
+
+        // Verif
+        assertTrue { isFinish }
+
+        coVerify { threeDSManagerMock.closeTransaction() }
+        coVerify { threeDSManagerMock.startInitialize("fake_token", cardType) }
+        coVerify { threeDSManagerMock.generateSDKContextData(cardType) }
+        coVerify { sessionStateRepositoryMock.makeWalletPayment(params = capture(captureWalletPaymentRequest)) }
+
+        assertEquals("CB", captureWalletPaymentRequest.captured.cardCode.name)
+        assertEquals(2, captureWalletPaymentRequest.captured.index)
+        assertTrue(captureWalletPaymentRequest.captured.isEmbeddedRedirectionAllowed)
+        assertEquals("", captureWalletPaymentRequest.captured.merchantReturnUrl)
+        kotlin.test.assertNotNull(captureWalletPaymentRequest.captured.securedPaymentParams)
+        // params
+        assertEquals("{\"deviceRenderingOptionsIF\":\"01\",\"deviceRenderOptionsUI\":\"03\",\"maxTimeout\":60,\"referenceNumber\":\"refNumber_xx\",\"ephemPubKey\":\"ephemPubKey_yyy\",\"appID\":\"sdkAppID_pp\",\"transID\":\"sdkTransactionID_kk\",\"encData\":\"deviceData_qq\"}",
+            captureWalletPaymentRequest.captured.paymentParams.sdkContextData)
+        // SecuredParams
+        assertEquals("123", captureWalletPaymentRequest.captured.securedPaymentParams.cvv)
+    }
+
+
+    @Test
+    fun makePaymentShouldCallMakeCardPayment() = runTest(testDispatcher) {
+        // Data
+        val paymentAttemptCB = SdkTestHelper.createPaymentAttemptCB()
+        val paymentMethodList = PreviewSamples.sessionStatePaymentMethodsList
+        sessionStateFlow.value = paymentMethodList
+
+        // Mock
+        coEvery { underTest.makeCardPayment(any(), any(), any()) } returns Unit
+
+        // Test
+        underTest.makePayment(paymentAttempt = paymentAttemptCB, context = contextMock) {}
+
+        // Verif
+        coVerify { underTest.makeCardPayment(paymentAttemptCB.paymentFormData, contextMock, any()) }
+        assertFalse(underTest.sessionLoading.value)
+    }
+
+    @Test
+    fun makePaymentShouldCallMakeWalletPayment() = runTest(testDispatcher) {
+        // Data
+        val paymentAttemptWalletCB = SdkTestHelper.createPaymentAttemptWalletCB()
+        val paymentMethodList = PreviewSamples.sessionStatePaymentMethodsList
+        sessionStateFlow.value = paymentMethodList
+
+        // Mock
+        coEvery { underTest.makeWalletPayment(any(), any(), any()) } returns Unit
+
+        // Test
+        underTest.makePayment(paymentAttempt = paymentAttemptWalletCB, context = contextMock) {}
+
+        // Verif
+        coVerify { underTest.makeWalletPayment(paymentAttemptWalletCB.selectedWallet, paymentAttemptWalletCB.walletFormData, any()) }
+        assertFalse(underTest.sessionLoading.value)
     }
 
 }

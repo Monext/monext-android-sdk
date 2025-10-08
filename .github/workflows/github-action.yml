@@ -380,7 +380,7 @@ jobs:
                         },
                         {
                           "title": "Branch/Tag:",
-                          "value": "${{ github.HEAD_REF }}"
+                          "value": "${{ github.REF_NAME }}"
                         },
                         {
                           "title": "Auteur:",

@@ -42,7 +42,7 @@ import com.monext.sdk.internal.util.HolderAssistant
 internal fun FormFieldsSection(cards: PaymentMethod.Cards, onFormValidated: (FormData?) -> Unit) {
 
     var cardNum by rememberSaveable { mutableStateOf("") }
-    val cardLookupNum by remember { derivedStateOf<String?> {
+    val cardLookupNum by remember { derivedStateOf {
         if (cardNum.length < 6) null
         else cardNum.take(10)
     } }

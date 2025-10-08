@@ -1,5 +1,6 @@
 package com.monext.sdk
 
+import ThreeDSConfiguration
 import com.monext.sdk.internal.api.AvailableCardNetworksRequest
 import com.monext.sdk.internal.api.AvailableCardNetworksResponse
 import com.monext.sdk.internal.api.HandledContract
@@ -13,8 +14,11 @@ import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.data.CardNetwork
 import com.monext.sdk.internal.data.FormData
 import com.monext.sdk.internal.data.PaymentMethod
+import com.monext.sdk.internal.data.sessionstate.AdditionalData
+import com.monext.sdk.internal.data.sessionstate.FormOption
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodData
+import com.monext.sdk.internal.data.sessionstate.Wallet
 import com.monext.sdk.internal.presentation.PaymentAttempt
 import com.monext.sdk.internal.service.CustomLogger
 import com.monext.sdk.internal.threeds.model.AuthenticationResponse
@@ -75,7 +79,42 @@ class SdkTestHelper {
                 index = 1,
                 isEmbeddedRedirectionAllowed = true,
                 merchantReturnUrl = "http://merchant.com/return/url",
+                paymentParams = createPaymentParams(),
                 securedPaymentParams = createSecuredParams()
+            )
+        }
+
+        internal fun createWallet(): Wallet = Wallet(
+            cardCode = PaymentMethodCardCode.CB,
+            index = 2,
+            cardType = PaymentMethodCardCode.CB,
+            isDefault = false,
+            isExpired = false,
+            expiredMore6Months = false,
+            hasCustomLogo = false,
+            customLogoRatio = 0,
+            hasCustomLogoUrl = false,
+            hasCustomLogoBase64 = false,
+            isPmAPI = false,
+            hasSpecificDisplay = false,
+            options = emptyList(),
+            additionalData = AdditionalData(
+                date = "1230",
+                holder = "",
+                pan = "***-XX07",
+                merchantCapabilities = null,
+                networks = null,
+                applePayMerchantId = null,
+                applePayMerchantName = null,
+                savePaymentDataChecked = null,
+                email = null
+            ),
+            confirm = listOf(FormOption.CVV)
+        )
+
+        internal fun createWalletFormData(): FormData.Wallet {
+            return FormData.Wallet(
+                cvv = "123"
             )
         }
 
@@ -84,12 +123,14 @@ class SdkTestHelper {
             contractNumber = "CB_01",
             isEmbeddedRedirectionAllowed = false,
             merchantReturnUrl = "http://merchant.dev.com/return/url",
-            paymentParams = PaymentParams(
-                network = "2",
-                expirationDate = "1228",
-                savePaymentData = false,
-                holderName = "Jean-Claude"
-            )
+            paymentParams = createPaymentParams()
+        )
+
+        internal fun createPaymentParams(): PaymentParams = PaymentParams(
+            network = "2",
+            expirationDate = "1228",
+            savePaymentData = false,
+            holderName = "Jean-Claude"
         )
 
         internal fun createPaymentRequestGooglePay(): PaymentRequest = PaymentRequest(
@@ -170,6 +211,15 @@ class SdkTestHelper {
                 ),
                 selectedWallet = null,
                 walletFormData = null
+            )
+        }
+
+        internal fun createPaymentAttemptWalletCB(): PaymentAttempt {
+            return PaymentAttempt(
+                selectedPaymentMethod = null,
+                paymentFormData = null,
+                selectedWallet = createWallet(),
+                walletFormData = createWalletFormData()
             )
         }
 

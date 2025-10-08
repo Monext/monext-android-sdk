@@ -53,10 +53,8 @@ class ThreeDSManagerTest {
     private lateinit var paymentApi: PaymentAPI
     @RelaxedMockK
     private lateinit var context: Context
-
     @RelaxedMockK
     private lateinit var threeDS2ServiceMock: ThreeDS2Service
-
     @RelaxedMockK
     private lateinit var schemeConfigurationMock: SchemeConfiguration
     @RelaxedMockK
