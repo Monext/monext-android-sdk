@@ -17,9 +17,13 @@ import com.monext.sdk.internal.data.sessionstate.PaymentFailure
 import com.monext.sdk.internal.data.sessionstate.Ticket
 import com.monext.sdk.internal.data.sessionstate.Wallet
 
+
+
 internal interface PreviewSamples {
 
     companion object {
+
+        const val FAKE_URL = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token"
 
         val sessionInfo = SessionInfo(
             formattedAmount = "EUR111.00",
@@ -197,10 +201,10 @@ internal interface PreviewSamples {
             token = "fake_token",
             type = SessionStateType.PAYMENT_METHODS_LIST,
             creationDate = "Fri Mar 21 10:45:00 CET 2025",
-            cancelUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+            cancelUrl = FAKE_URL,
             pointOfSale = "POS_Fake",
             language = "en",
-            returnUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+            returnUrl = FAKE_URL,
             automaticRedirectAtSessionsEnd = false,
             info = sessionInfo,
             pointOfSaleAddress = posAddress,
@@ -278,10 +282,10 @@ internal interface PreviewSamples {
             token = "fake_token",
             type = SessionStateType.PAYMENT_SUCCESS,
             creationDate = "Tue Mar 25 12:33:22 CET 2025",
-            cancelUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+            cancelUrl = FAKE_URL,
             pointOfSale = "POS_Fake",
             language = "en",
-            returnUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+            returnUrl = FAKE_URL,
             automaticRedirectAtSessionsEnd = false,
             info = sessionInfo,
             pointOfSaleAddress = posAddress,
@@ -307,10 +311,10 @@ internal interface PreviewSamples {
                 token = "fake_token",
                 type = type,
                 creationDate = "Tue Mar 25 12:33:22 CET 2025",
-                cancelUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+                cancelUrl = FAKE_URL,
                 pointOfSale = "POS_Fake",
                 language = "en",
-                returnUrl = "https://yourdomain.com:8080/route/1.0/returns?paylinetoken=fake_token",
+                returnUrl = FAKE_URL,
                 automaticRedirectAtSessionsEnd = automaticRedirect,
                 info = sessionInfo,
                 pointOfSaleAddress = posAddress,

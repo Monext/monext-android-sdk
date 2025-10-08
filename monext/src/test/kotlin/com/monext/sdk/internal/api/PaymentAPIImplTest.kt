@@ -1,5 +1,7 @@
 package com.monext.sdk.internal.api
 
+import com.monext.sdk.BuildConfig.VERSION_CODE
+import com.monext.sdk.BuildConfig.VERSION_NAME
 import com.monext.sdk.MnxtEnvironment
 import com.monext.sdk.SdkTestHelper
 import com.monext.sdk.internal.api.model.response.SessionState
@@ -317,6 +319,8 @@ class PaymentAPIImplTest {
         assertEquals("application/json", captureHttpRequest.captured.headers.getValue("Accept"))
         assertEquals("en", captureHttpRequest.captured.headers.getValue("Accept-Language"))
         assertEquals(origin, captureHttpRequest.captured.headers.getValue("Origin"))
+        assertNotNull(captureHttpRequest.captured.headers.getValue("X-Widget-SDK"))
+        assertEquals("Android $VERSION_NAME", captureHttpRequest.captured.headers.getValue("X-Widget-SDK"))
     }
 
     // Helper methods for mocking HTTP responses
