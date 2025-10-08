@@ -57,7 +57,6 @@ internal enum class SessionStateType {
             PAYMENT_FAILURE, PAYMENT_FAILURE_WITH_RETRY -> PaymentResult.TransactionState.PAYMENT_FAILURE
             PAYMENT_CANCELED -> PaymentResult.TransactionState.PAYMENT_CANCELED
             TOKEN_EXPIRED -> PaymentResult.TransactionState.TOKEN_EXPIRED
-            // TODO: Determine all possible states
             else -> null
         }
 

@@ -1,6 +1,6 @@
 package com.monext.sdk.internal.api
 
-import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKeyResponse
+import com.monext.sdk.BuildConfig.VERSION_NAME
 import com.monext.sdk.MnxtEnvironment
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.request.PaymentRequest
@@ -12,6 +12,7 @@ import com.monext.sdk.internal.data.sessionstate.PaymentMethodCardCode
 import com.monext.sdk.internal.exception.NetworkError
 import com.monext.sdk.internal.service.Logger
 import com.monext.sdk.internal.threeds.model.AuthenticationResponse
+import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKeyResponse
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -180,7 +181,8 @@ internal class PaymentAPIImpl(
             "Content-Type" to "application/json",
             "Accept" to "application/json",
             "Accept-Language" to language,
-            "Origin" to environment.host
+            "Origin" to environment.host,
+            "X-Widget-SDK" to "Android $VERSION_NAME"
         )
     }
 
