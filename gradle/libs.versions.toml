@@ -9,6 +9,9 @@ appcompat = "1.7.1"
 bouncycastle = "1.79"
 composeBom = "2025.09.00"
 composePayButton = "1.1.0"
+coilCompose = "3.3.0"
+coilNetworkOkhttp = "3.3.0"
+coilTest = "3.3.0"
 datastorePreferences = "1.1.7"
 dokka = "2.0.0"
 espressoCore = "3.5.0"
@@ -67,7 +70,9 @@ androidx-ui-test-junit4-android = { group = "androidx.compose.ui", name = "ui-te
 androidx-runtime = { group = "androidx.xr.runtime", name = "runtime", version.ref = "runtime" }
 androidx-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "junitKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-
+io-coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
+io-coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilNetworkOkhttp" }
+io-coil-test = { module = "io.coil-kt.coil3:coil-test", version.ref = "coilTest" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }

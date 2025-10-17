@@ -7,12 +7,16 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import coil3.ColorImage
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.test.FakeImageLoaderEngine
 import com.monext.sdk.Appearance
 import com.monext.sdk.FakeTestActivity
 import com.monext.sdk.LocalAppearance
-import com.monext.sdk.internal.data.sessionstate.AdditionalData
-import com.monext.sdk.internal.data.sessionstate.Logo
-import com.monext.sdk.internal.data.sessionstate.PaymentMethodData
 import com.monext.sdk.internal.presentation.common.PaymentMethodChip
 import com.monext.sdk.internal.presentation.common.PaymentMethodImageWithFallback
 import org.junit.Before
@@ -30,11 +34,14 @@ class PaymentMethodChipTest {
         headerTitle = "Monext Demo"
     )
 
+    @OptIn(DelicateCoilApi::class)
     @Before
     fun setup() {
         // Désactiver StrictMode pour les tests si besoin
         StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.LAX)
         StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX)
+        // Réinitialiser le singleton Coil avant chaque test
+        SingletonImageLoader.reset()
     }
 
     private val cbCode = "CB"
@@ -66,64 +73,71 @@ class PaymentMethodChipTest {
         composeTestRule.onNodeWithTag("AmexLogo").assertIsDisplayed()
     }
 
+    @OptIn(ExperimentalCoilApi::class)
+    @Test
+    fun paymentMethodImageWithFallback_shouldDisplayProgressIndicator() {
+        // Given
+        val logoUrl = "https://example.com/logo.png"
+        val fallbackText = "Logo"
+
+        // When
+        composeTestRule.activity.setTestComposable {
+            PaymentMethodImageWithFallback(
+                logoUrl = logoUrl,
+                fallbackText = fallbackText
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithTag("loading_indicator").assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalCoilApi::class)
+    @Test
+    fun paymentMethodImageWithFallback_shouldDisplayImage() {
+        // Given
+        val logoUrl = "https://example.com/logo.png"
+        val fallbackText = "Logo"
+        val context = composeTestRule.activity
+
+        val engine = FakeImageLoaderEngine.Builder()
+            .intercept(logoUrl, ColorImage())
+            .build()
+
+        val imageLoader = ImageLoader.Builder(context)
+            .components { add(engine) }
+            .build()
+
+        // When
+        composeTestRule.activity.setTestComposable {
+            setSingletonImageLoaderFactory { imageLoader }
+            PaymentMethodImageWithFallback(
+                logoUrl = logoUrl,
+                fallbackText = fallbackText
+            )
+        }
+        // Then
+        composeTestRule.onNodeWithText(fallbackText).assertDoesNotExist()
+        composeTestRule.onNodeWithTag("paymentMethod_image").assertIsDisplayed()
+
+    }
+
     @Test
     fun paymentMethodImageWithFallback_showsFallbackText_whenLogoNull() {
-        val fallback = "Fallback"
+        val fallbackText = "Logo"
         composeTestRule.activity.setTestComposable {
             CompositionLocalProvider(LocalAppearance provides appearance) {
-                PaymentMethodImageWithFallback(logoUrl = null, fallbackText = fallback)
+                PaymentMethodImageWithFallback(logoUrl = null, fallbackText = fallbackText)
             }
         }
-        composeTestRule.onNodeWithText(fallback).assertIsDisplayed()
+        composeTestRule.onNodeWithText(fallbackText).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("fallback_text").assertIsDisplayed()
     }
 
     @Test
     fun paymentMethodChip_showsCardText_whenCardCodeNull() {
         setChipContent(cardCode = null)
         composeTestRule.onNodeWithTag("CardLogo").assertIsDisplayed()
-    }
-
-    @Test
-    fun paymentMethodImage_showsLogo_whenPaymentMethodDataLogoUrlSet() {
-        val fakeLogoUrl = "https://logo.com/visa.png"
-        val paymentMethodData = PaymentMethodData(
-            cardCode = "VISA",
-            contractNumber = "VISA",
-            disabled = false,
-            hasForm = true,
-            form = null,
-            hasLogo = true,
-            logo = Logo(
-                width = 0,
-                height = 0,
-                url = fakeLogoUrl,
-                title = "Visa"
-            ),
-            isIsolated = false,
-            options = null,
-            paymentMethodAction = null,
-            additionalData = AdditionalData(
-                merchantCapabilities = null,
-                networks = null,
-                applePayMerchantId = null,
-                applePayMerchantName = null,
-                savePaymentDataChecked = null,
-                email = null,
-                date = null,
-                holder = null,
-                pan = null
-            ),
-            requestContext = null,
-            shouldBeInTopPosition = null,
-            state = null
-        )
-        composeTestRule.activity.setTestComposable {
-            CompositionLocalProvider(LocalAppearance provides appearance) {
-                PaymentMethodChip(cardCode = null, paymentMethodData = paymentMethodData, isExpanded = false, showsBack = false)
-            }
-        }
-        // Comme la gestion d'image n'est pas implémentée, on doit vérifier la présence du fallbackText
-        composeTestRule.onNodeWithText("Visa").assertIsDisplayed()
     }
 
     private fun setChipContent(cardCode: String?) {
