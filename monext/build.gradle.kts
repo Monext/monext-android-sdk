@@ -57,16 +57,6 @@ android {
             )
             enableUnitTestCoverage = false
             enableAndroidTestCoverage = false
-
-            //  Signature pour les releases (CI/CD uniquement)
-            if (System.getenv("KEYSTORE_PATH") != null) {
-                signingConfig = signingConfigs.create("release") {
-                    storeFile = file(System.getenv("KEYSTORE_PATH"))
-                    storePassword = System.getenv("KEYSTORE_PASSWORD")
-                    keyAlias = System.getenv("KEY_ALIAS")
-                    keyPassword = System.getenv("KEY_PASSWORD")
-                }
-            }
         }
     }
 
@@ -138,7 +128,7 @@ android {
         outputs.all {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val versionName = getVersionName()
-            outputImpl.outputFileName = "monext-sdk-${versionName}-${name}.aar"
+            outputImpl.outputFileName = "monext-android-sdk-${versionName}-${name}.aar"
         }
     }
 }
@@ -170,21 +160,8 @@ fun getApiKey(): String {
 }
 
 // Fonction pour déterminer la version du SDK
-fun getVersionName(): String {
-    // Priorité :
-    // 1. Variable d'environnement (CI/CD)
-    // 2. Propriété gradle.properties ou -P
-    // 3. Valeur par défaut
-    return System.getenv("VERSION_NAME")
-        ?: project.findProperty("version") as? String
-        ?: "default"
-}
-// Fonction pour récupérer la version du build
-fun getVersionCode(): Int {
-    // GitHub Actions run number ou timestamp pour local
-    return System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
-        ?: (System.currentTimeMillis() / 1000).toInt()
-}
+fun getVersionName(): String = (project.extra["getVersionName"] as () -> String)()
+fun getVersionCode(): Int = (project.extra["getVersionCode"] as () -> Int)()
 
 // Configuration pour la publication Maven
 publishing {
@@ -192,7 +169,7 @@ publishing {
     publications {
         create<MavenPublication>("release") {
             groupId = "com.monext"
-            artifactId = "payment-sdk-android"
+            artifactId = "monext-android-sdk"
             version = getVersionName()
 
             afterEvaluate {
@@ -201,31 +178,32 @@ publishing {
 
             // Métadonnées POM pour Maven Central
             pom {
-                name.set("Monext Payment SDK")
-                description.set("SDK Android pour l'intégration de paiements sécurisés avec 3D-Secure")
-                url.set("https://github.com/monext/payment-sdk-android")
+                name.set("Monext Android SDK")
+                description.set("SDK Android pour l'intégration de paiements sécurisés")
+                url.set("https://github.com/Monext/monext-android-sdk")
 
-                licenses {
-                    license {
-                        name.set("Proprietary")
-                        url.set("https://www.monext.fr/legal/sdk-license")
-                    }
-                }
+                // TODO : A voir
+//                licenses {
+//                    license {
+//                        name.set("Proprietary")
+//                        url.set("https://www.monext.fr/legal/sdk-license")
+//                    }
+//                }
 
                 developers {
                     developer {
                         id.set("monext")
-                        name.set("Monext Team")
+                        name.set("Monext online Team")
                         email.set("sdk-support@monext.fr")
                         organization.set("Monext")
-                        organizationUrl.set("https://www.monext.fr")
+                        organizationUrl.set("https://www.monext.com")
                     }
                 }
 
                 scm {
-                    connection.set("scm:git:github.com/monext/payment-sdk-android.git")
-                    developerConnection.set("scm:git:ssh://github.com/monext/payment-sdk-android.git")
-                    url.set("https://github.com/monext/payment-sdk-android")
+                    connection.set("scm:git:github.com/Monext/monext-android-sdk.git")
+                    developerConnection.set("scm:git:ssh://github.com/Monext/monext-android-sdk.git")
+                    url.set("https://github.com/Monext/monext-android-sdk")
                 }
             }
         }
@@ -245,23 +223,12 @@ publishing {
         // GitHub Packages
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/monext/payment-sdk-android")
+            url = uri("https://maven.pkg.github.com/Monext/monext-android-sdk")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
             }
         }
-
-        // Repository privé Monext (optionnel)
-        // TODO : Voir plus tard pour utiliser un repo pour stocker les versions de l'APP pour les test QA
-//        maven {
-//            name = "MonextPrivate"
-//            url = uri("https://nexus.monext.fr/repository/maven-releases/")
-//            credentials {
-//                username = System.getenv("NEXUS_USERNAME")
-//                password = System.getenv("NEXUS_PASSWORD")
-//            }
-//        }
     }
 }
 

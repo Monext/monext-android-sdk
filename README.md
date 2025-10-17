@@ -34,6 +34,9 @@ Monext Android SDK is available via [Gradle](https://docs.gradle.org/current/use
    implementation("com.monext:TODO:(insert latest version here)")
    ```
 
+TODO : TGE : laius sur utilisaiton de l'AAR généré car clé d'api dans le build
+
+
 ## Security Best Practices
 
 ⚠️ **Important:** API calls to Monext **must** be made from your backend server—not directly from your mobile application. This protects sensitive credentials such as:
@@ -137,7 +140,7 @@ fun CustomPaymentSheet {
 
 ## UI Customization
 
-Customize the payment sheet using `MnxtSDKConfiguration`. Modify colors, texts, and themes to match your branding.
+Customize the payment sheet using `Appearance`. Modify colors, texts, and themes to match your branding.
 
 All available UI customizations are contained in this class. You are not required to modify any element, the default is a light theme.
 It is recommended to provide the `headerTitle` or `headerImage` at a minimum to identify your brand.

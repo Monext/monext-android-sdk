@@ -1,0 +1,24 @@
+name: 'Get SDK Version'
+description: 'Retrieve SDK version from Gradle'
+outputs:
+  version_name:
+    description: 'SDK version name'
+    value: ${{ steps.version.outputs.version_name }}
+  version_code:
+    description: 'SDK version code'
+    value: ${{ steps.version.outputs.version_code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Retrieve Version
+      id: version
+      shell: bash
+      run: |
+        VERSION_NAME=$(./gradlew -q :monext:printVersion | tail -n 1 | tr -d '\n\r')
+        VERSION_CODE=$(./gradlew -q :monext:printVersionCode | tail -n 1 | tr -d '\n\r')
+        
+        echo "version_name=${VERSION_NAME}" >> $GITHUB_OUTPUT
+        echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
+        
+        echo "✓ Version retrieved: ${VERSION_NAME} (${VERSION_CODE})"

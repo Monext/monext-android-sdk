@@ -56,6 +56,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Setup Google Services
+        uses: ./.github/actions/setup-google-services
+        with:
+          firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
+          firebase_api_key: ${{ secrets.FIREBASE_APP_ID }}
+
       # ============================================
       # TESTS UNITAIRES (tests sur la JVM, sans Android)
       # ============================================
@@ -144,6 +150,12 @@ jobs:
           java-version: ${{ env.JDK_VERSION }}
           cache: 'gradle'
 
+      - name: Setup Google Services
+        uses: ./.github/actions/setup-google-services
+        with:
+          firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
+          firebase_api_key: ${{ secrets.FIREBASE_APP_ID }}
+
       # Cache pour les packages SonarCloud (accélère l'analyse)
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
@@ -171,85 +183,82 @@ jobs:
           find . -name "*.ec" -type f
           find . -name "jacocoTestReport.xml" -type f
 
-      # Build minimal puis Sonar (pas de re-test)
+      # Build minimal puis Sonar
       - name: Run SonarCloud analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          ./gradlew assemble --stacktrace
+          ./gradlew assembleDebug --stacktrace
           ./gradlew sonar --info -x test -x testDebugUnitTest
 
 
+  # ============================================
+  # ============================================
+  # BUILD ET PUBLICATION DU SDK => Release uniquement
+  # => Déploiement sonatype + github release
+  # ============================================
+  # ============================================
+  build-and-publish-release:
+    name: Build and Publish SDK
+    runs-on: ubuntu-latest
+    needs: [test, sonarcloud]
+    if:
+      contains('
+      refs/heads/main
+      refs/heads/master
+      refs/heads/release
+      ', github.ref)
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-#
-#  # ============================================
-#  # BUILD ET PUBLICATION DU SDK
-#  # ============================================
-#  build-and-publish:
-#    name: Build and Publish SDK
-#    runs-on: ubuntu-latest
-#    needs: [test, sonarcloud]
-#  #    branches: [ main, develop ] # TODO : A tester
-#    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v'))
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#
-#      - name: Set up JDK
-#        uses: actions/setup-java@v4
-#        with:
-#          distribution: ${{ env.JDK_DISTRIBUTION }}
-#          java-version: ${{ env.JDK_VERSION }}
-#          cache: 'gradle'
-#
-#      - name: Setup Android SDK
-#        uses: android-actions/setup-android@v3
-#        with:
-#          cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
-#
-#      - name: Retrieve Version
-#        run: echo "VERSION_NAME=$(${{github.workspace}}/gradlew -q :monext:printVersion)" >> $GITHUB_ENV
-##        run: |
-##          echo "::set-output name=VERSION_NAME::$(${{github.workspace}}/gradlew -q :monext:printVersion)"
-#
-#      - name: Decode and save keystore
-#        if: startsWith(github.ref, 'refs/tags/v')
-#        env:
-#          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-#        run: |
-#          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/keystore.jks
-#
-#      - name: Extract version from tag
-#        if: startsWith(github.ref, 'refs/tags/v')
-#        id: get_version
-#        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-#
-#      - name: Build Release AAR
-#        run: ./gradlew :monext:assembleRelease
-#        env:
-#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
-#          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
-#          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-#          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-#          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-#          SDK_VERSION: ${{ env.VERSION_NAME }}
-##          SDK_VERSION: ${{ steps.get_version.outputs.VERSION }}
-#
-#      - name: Generate documentation
-#        run: ./gradlew :monext:dokkaHtml
-#
-#      - name: Upload AAR artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: sdk-aar
-#          path: monext/build/outputs/aar/*.aar
-#
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JDK_DISTRIBUTION }}
+          java-version: ${{ env.JDK_VERSION }}
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
+
+      - name: Decode and save keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/keystore.jks
+
+      - name: Setup Google Services
+        uses: ./.github/actions/setup-google-services
+        with:
+          firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
+          firebase_api_key: ${{ secrets.FIREBASE_APP_ID }}
+
+      - name: Build Release AAR
+        run: ./gradlew :monext:assembleRelease
+        env:
+          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+
+      - name: Generate documentation
+        run: ./gradlew :monext:dokkaHtml
+
+      - name: Upload AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-aar
+          path: monext/build/outputs/aar/*.aar
+
+      # RÉCUPÉRATION DE LA VERSION
+      - name: Get Version
+        id: version
+        uses: ./.github/actions/setup-sdk-version
+
 #      # Publication sur Maven Central
 #      - name: Publish to Maven Central
-#        if: startsWith(github.ref, 'refs/tags/v')
 #        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
 #        env:
 #          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
@@ -259,64 +268,288 @@ jobs:
 #          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 #          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
 #
+
 #      # Publication sur GitHub Packages
-#      - name: Publish to GitHub Packages
+      - name: Create GitHub Release
 #        if: startsWith(github.ref, 'refs/tags/v')
-#        run: ./gradlew :monext:publishReleasePublicationToGitHubPackagesRepository
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
-#
-#      - name: Create GitHub Release
-#        if: startsWith(github.ref, 'refs/tags/v')
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          files: |
-#            monext/build/outputs/aar/*.aar
-#            CHANGELOG.md
-#          generate_release_notes: true
-#          draft: true
-#          prerelease: false
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            monext/build/outputs/aar/*.aar
+            CHANGELOG.md
+          generate_release_notes: true
+          draft: true # TODO : A voir quand Maven central sera ok
+          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: Monext Online Android SDK Release v${{ steps.version.outputs.VERSION_NAME }}
+          #  Permet de mettre à jour une release existante si elle existe déjà
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
   # ============================================
-  # NOTIFICATIONS Teams
   # ============================================
-  notify:
-    name: Teams Notification
+  # BUILD ET DISTRIBUTION QA (branche develop)
+  # ============================================
+  # ============================================
+  build-apk-qa-release:
+    name: Build App Demo QA Release
     runs-on: ubuntu-latest
-    #needs: [build-and-publish]
-    if:
-      contains('
-      refs/heads/main
-      refs/heads/master
-      refs/heads/develop
-      refs/heads/release
-      ', github.ref)
+    needs: [test, sonarcloud]
+    # Uniquement sur develop ET si les tests passent
+    if: github.ref == 'refs/heads/develop' && needs.test.result == 'success' && needs.sonarcloud.result == 'success'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Retrieve Version
-        id: get_version
-        run: |
-          VERSION_NAME=$(./gradlew -q :monext:printVersion | tail -n 1 | tr -d '\n\r')
-          VERSION_CODE=$(./gradlew -q :monext:printVersionCode | tail -n 1 | tr -d '\n\r')
-          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
-          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
-          echo "Version retrieved: ${VERSION_NAME} (${VERSION_CODE})"
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JDK_DISTRIBUTION }}
+          java-version: ${{ env.JDK_VERSION }}
+          cache: 'gradle'
 
-      - name: Send Teams Notification
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # ============================================
+      # RÉCUPÉRATION DE LA VERSION
+      # ============================================
+      - name: Get Version
+        id: version
+        uses: ./.github/actions/setup-sdk-version
+
+      - name: Setup Google Services
+        uses: ./.github/actions/setup-google-services
+        with:
+          firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
+          firebase_api_key: ${{ secrets.FIREBASE_CURRENT_KEY }}
+
+      - name: Decode and save keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/keystore.jks
+          echo "✓ Keystore decoded"
+
+      # ============================================
+      # BUILD DE L'APP DÉMO (compile automatiquement le SDK et signe l'APK)
+      # ============================================
+      - name: Build Demo App and SDK
+        run: |
+          echo "📱 Building app (will automatically build SDK in Release mode)..."
+          ./gradlew :app:assembleRelease --info
+          echo "✓ Build completed successfully!"
+        env:
+          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # ============================================
+      # PRÉPARATION de l'APK + release note
+      # ============================================
+      - name: Prepare artifacts
+        run: |
+          mkdir -p qa-release
+          
+          # Copier l'APK de l'app demo
+          cp app/build/outputs/apk/release/*.apk qa-release/
+          
+          # Récupération du fileName
+          APK_FILE=$(find qa-release -name "*.apk" | head -1)
+          APK_FILENAME=$(basename "$APK_FILE")
+          
+          # Créer le fichier de release notes
+          cat > qa-release/RELEASE_NOTES.txt <<EOF
+          ══════════════════════════════════════════════════════
+          📱 MONEXT DEMO APP (Android SDK) - Version QA
+          ══════════════════════════════════════════════════════
+          📱 Fichier APK
+          Nom original: ${APK_FILENAME}
+          Taille: $(du -h "$APK_FILE" | cut -f1)
+          
+          Version SDK    : ${{ steps.version.outputs.VERSION_NAME }}
+          Build Number   : ${{ steps.version.outputs.VERSION_CODE }}
+          Branch         : ${{ github.ref_name }}
+          Date           : $(date +'%Y-%m-%d %H:%M:%S')
+          Auteur         : ${{ github.actor }}
+          
+          ══════════════════════════════════════════════════════
+          📝 Changements récents:
+          ${{ steps.commit_info.outputs.message }}
+          ══════════════════════════════════════════════════════
+          EOF
+        
+          echo "✓ Artefacts préparés"
+          ls -lh qa-release/
+
+      # ============================================
+      # FIREBASE APP DISTRIBUTION
+      # ============================================
+      - name: Setup Node.js (for Firebase CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Setup Firebase Authentication
+        run: |
+          # Recupération du Service Account pour la connexion
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d > firebase-sa.json
+          
+          # Définir la variable d'environnement
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${{ github.workspace }}/firebase-sa.json" >> $GITHUB_ENV
+          echo "✓ Firebase authentication configured"
+
+      - name: Upload to Firebase App Distribution
+        run: |
+          APK_FILE=$(find qa-release -name "*.apk" | head -1)
+          APK_FILENAME=$(basename "$APK_FILE")
+          
+          echo "📤 Uploading ${APK_FILENAME} to Firebase..."
+          
+          firebase appdistribution:distribute "$APK_FILE" \
+            --app "${{ secrets.FIREBASE_APP_ID }}" \
+            --groups "qa-team, squad3, monext-android" \
+            --release-notes-file "qa-release/RELEASE_NOTES.txt"
+          
+          echo "✅ APK uploaded successfully to Firebase App Distribution"
+
+      - name: Cleanup files
         if: always()
         run: |
-          ICON_COLOR="${{ job.status == 'success' && 'Good' || 'attention' }}"
-          ICON="${{ job.status == 'success' && 'CheckmarkStarburst' || 'DismissCircle' }}"
-          STATUS_TEXT="${{ job.status }}"
+          rm -f ${{ github.workspace }}/keystore.jks
+          rm -f ${{ github.workspace }}/firebase-sa.json
+          rm -f app/google-services.json
+          echo "✓ Cleanup completed"
 
-          curl -X POST "${{ secrets.TEAMS_WEBHOOK_URL_DEVTEAM }}" \
+  # ============================================
+  # ============================================
+  # NOTIFICATIONS Teams
+  # ============================================
+  # ============================================
+  notify:
+    name: Teams Notification
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [test, sonarcloud, build-apk-qa-release, build-and-publish-release]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Version
+        id: version
+        uses: ./.github/actions/setup-sdk-version
+
+      # ============================================
+      # CHECK 1 : Check Notification QA
+      # ============================================
+      - name: Should send QA Notification
+        id: teams_notif_qualif
+        if: |
+          github.ref == 'refs/heads/develop' &&
+          needs.test.result == 'success' &&
+          needs.sonarcloud.result == 'success'
+        run: |
+          TEAMS_WEBHOOK_URL="${{ secrets.TEAMS_WEBHOOK_URL_QUALIF }}"
+          SHOULD_SEND="yes"
+          NOTIFICATION_TYPE="QA"
+          
+          echo "webhook_url=${TEAMS_WEBHOOK_URL}" >> $GITHUB_OUTPUT
+          echo "should_send=${SHOULD_SEND}" >> $GITHUB_OUTPUT
+          echo "notif_type=${NOTIFICATION_TYPE}" >> $GITHUB_OUTPUT
+          echo "Should send QA notification => ${SHOULD_SEND}"
+
+      # ============================================
+      # CHECK 2 : Check Notification Release
+      # ============================================
+      - name: Should send Release Notification
+        id: teams_notif_release
+        if: |
+          (github.ref == 'refs/heads/main' || 
+           github.ref == 'refs/heads/master' || 
+           startsWith(github.ref, 'refs/heads/release/') ||
+           startsWith(github.ref, 'refs/tags/v'))
+        run: |
+          TEAMS_WEBHOOK_URL="${{ secrets.TEAMS_WEBHOOK_URL_SDK_MOBILE }}"
+          SHOULD_SEND="yes"
+          NOTIFICATION_TYPE="Release"
+          BUILD_RESULT="${{ needs.build-and-publish-release.result }}"
+          
+          # Check du statut
+          if [[ "$BUILD_RESULT" == "success" ]]; then
+          ICON_COLOR="Good"
+          ICON="CheckmarkStarburst"
+          STATUS_TEXT="✅ success"
+          elif [[ "$BUILD_RESULT" == "failure" ]]; then
+          ICON_COLOR="Attention"
+          ICON="DismissCircle"
+          STATUS_TEXT="❌ Échec"
+          else
+          ICON_COLOR="Warning"
+          ICON="Warning"
+          STATUS_TEXT="⚠️ Unknow"
+          fi
+          
+          # On passe les variables via outputs
+          echo "webhook_url=${TEAMS_WEBHOOK_URL}" >> $GITHUB_OUTPUT
+          echo "should_send=${SHOULD_SEND}" >> $GITHUB_OUTPUT
+          echo "notif_type=${NOTIFICATION_TYPE}" >> $GITHUB_OUTPUT
+          echo "icon_color=${ICON_COLOR}" >> $GITHUB_OUTPUT
+          echo "icon=${ICON}" >> $GITHUB_OUTPUT
+          echo "status_text=${STATUS_TEXT}" >> $GITHUB_OUTPUT
+          
+          echo "Should send Release notification => ${SHOULD_SEND} (status: ${STATUS_TEXT})"
+
+      # ============================================
+      # ENVOI DE LA NOTIFICATION (un seul step)
+      # ============================================
+      - name: Send Teams Notification
+        # ✅ S'exécute si AU MOINS UN des deux checks dit "yes"
+        if: |
+          steps.teams_notif_qualif.outputs.should_send == 'yes' ||
+          steps.teams_notif_release.outputs.should_send == 'yes'
+        run: |
+          # ✅ Récupérer les variables depuis les outputs
+          if [[ "${{ steps.teams_notif_qualif.outputs.should_send }}" == "yes" ]]; then
+            WEBHOOK_URL="${{ steps.teams_notif_qualif.outputs.webhook_url }}"
+            NOTIF_TYPE="${{ steps.teams_notif_qualif.outputs.notif_type }}"
+            ICON_COLOR="Good"
+            ICON="CheckmarkStarburst"
+            STATUS_TEXT="✅ QA Release disponible"
+            EXTRA_MESSAGE="📱 L'APK est maintenant disponible sur Firebase App Distribution. Les testeurs ont reçu une notification automatique."
+            FIREBASE_ACTION='
+                      {
+                        "type": "Action.OpenUrl",
+                        "title": "📱 Ouvrir Firebase Console",
+                        "url": "https://console.firebase.google.com/project/monext-android-sdk/appdistribution/app/android:com.monext.sdkexample/releases"
+                      },'
+          else
+            WEBHOOK_URL="${{ steps.teams_notif_release.outputs.webhook_url }}"
+            NOTIF_TYPE="${{ steps.teams_notif_release.outputs.notif_type }}"
+            ICON_COLOR="${{ steps.teams_notif_release.outputs.icon_color }}"
+            ICON="${{ steps.teams_notif_release.outputs.icon }}"
+            STATUS_TEXT="${{ steps.teams_notif_release.outputs.status_text }}"
+            EXTRA_MESSAGE="Publication sur Maven Central et GitHub Packages."
+            FIREBASE_ACTION=""
+          fi
+          
+          echo "Sending ${NOTIF_TYPE} notification to Teams..."
+          
+          curl -X POST "${WEBHOOK_URL}" \
                -H "Content-Type: application/json" \
                -d @- << EOF
           {
@@ -339,11 +572,11 @@ jobs:
                           "height": "stretch",
                           "items": [
                             {
-                              "type": "Icon",
-                              "name": "${ICON}",
-                              "style": "Filled",
-                              "color": "${ICON_COLOR}"
-                            }
+                                "type": "Icon",
+                                "name": "${ICON}",
+                                "style": "Filled",
+                                "color": "${ICON_COLOR}"
+                              }
                           ],
                           "spacing": "None"
                         },
@@ -366,7 +599,7 @@ jobs:
                     },
                     {
                       "type": "TextBlock",
-                      "text": "_version ${{env.VERSION_NAME}} (build ${{env.VERSION_CODE}})_",
+                      "text": "_version ${{ steps.version.outputs.VERSION_NAME }} (build ${{ steps.version.outputs.VERSION_CODE }})_",
                       "wrap": true,
                       "isSubtle": true,
                       "spacing": "Small"
@@ -380,7 +613,7 @@ jobs:
                         },
                         {
                           "title": "Branch/Tag:",
-                          "value": "${{ github.REF_NAME }}"
+                          "value": "${{ github.ref_name }}"
                         },
                         {
                           "title": "Auteur:",
@@ -388,12 +621,19 @@ jobs:
                         }
                       ],
                       "separator": true
+                    },
+                    {
+                      "type": "TextBlock",
+                      "text": "${EXTRA_MESSAGE}",
+                      "wrap": true,
+                      "separator": true
                     }
                   ],
                   "actions": [
+                    ${FIREBASE_ACTION}
                     {
                       "type": "Action.OpenUrl",
-                      "title": "Voir le build",
+                      "title": "📊 Voir le build",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ]
@@ -402,3 +642,5 @@ jobs:
             ]
           }
           EOF
+          
+          echo "✅ ${NOTIF_TYPE} notification sent successfully"
