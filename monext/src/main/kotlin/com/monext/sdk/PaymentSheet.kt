@@ -95,6 +95,9 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                         viewModel.sessionState.value?.type?.toTransactionState()
                     )
                 )
+                if (!sheetState.isVisible) {
+                onIsShowingChange?.invoke(false)
+            }
             },
             modifier = Modifier.statusBarsPadding().testTag("payment_bottom_sheet"),
             sheetState = sheetState,

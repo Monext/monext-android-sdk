@@ -1,11 +1,15 @@
 package com.monext.sdk
 
 import android.os.StrictMode
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -73,7 +77,7 @@ class PaymentSheetTest {
         // Arrange
         var dismissResult: PaymentResult? = null
         val testContext = MnxtSDKContext(MnxtEnvironment.Sandbox)
-
+        var showPaymentSheet by mutableStateOf(true)
         composeTestRule.activity.setTestComposable {
             PaymentSheet(
                 isShowing = true,
@@ -81,7 +85,8 @@ class PaymentSheetTest {
                 sdkContext = testContext,
                 onResult = { result ->
                     dismissResult = result
-                }
+                },
+                onIsShowingChange = { showPaymentSheet = it }
             )
         }
 
@@ -96,5 +101,7 @@ class PaymentSheetTest {
         composeTestRule.waitUntil(5000) {
             dismissResult is PaymentResult.SheetDismissed
         }
+
+        assertFalse(showPaymentSheet)
     }
 }

@@ -393,6 +393,8 @@ dependencies {
     implementation(libs.play.services.wallet)
     implementation(libs.androidx.runtime)
     implementation(libs.androidx.appcompat)
+    implementation(libs.io.coil.compose)
+    implementation(libs.io.coil.network.okhttp)
 
     // !! Attention la Lib Netcetera 2.5.3.0 est mise en Bundle du SDK pour etre buildée avec (il y a le jar et les dossiers 'jnilibs', 'res')
     // Voir la documentation : https://3dss.netcetera.com/3dssdk/doc/2.25.0/android-integration
@@ -413,4 +415,5 @@ dependencies {
     androidTestImplementation(libs.io.mockk)
     androidTestImplementation(libs.io.mockk.agent)
     androidTestImplementation(libs.io.mockk.android)
+    androidTestImplementation(libs.io.coil.test)
 }
