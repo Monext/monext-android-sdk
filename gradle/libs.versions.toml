@@ -12,7 +12,9 @@ composePayButton = "1.1.0"
 datastorePreferences = "1.1.7"
 dokka = "2.0.0"
 espressoCore = "3.5.0"
-io-mockk = "1.14.5"
+firebaseBom = "34.4.0"
+google-services = "4.4.4"
+io-mockk = "1.14.6"
 jetbrains-kotlinx-test = "1.10.2"
 junitJupiter = "5.13.4"
 junitVersion = "1.3.0"
@@ -24,8 +26,8 @@ playServicesWallet = "19.4.0"
 slf4jApi = "2.0.17"
 sonarqube = "6.3.1.5724"
 uiTooling = "1.9.1"
-uiTestJunit4Android = "1.9.1"
-runtime = "1.0.0-alpha05"
+uiTestJunit4Android = "1.9.3"
+runtime = "1.0.0-alpha06"
 junitKtx = "1.3.0"
 
 [libraries]
@@ -49,6 +51,8 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15to18", version.ref = "bouncycastle" }
 compose-pay-button = { module = "com.google.pay.button:compose-pay-button", version.ref = "composePayButton" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 io-mockk = { group = "io.mockk", name = "mockk", version.ref = "io-mockk" }
 io-mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "io-mockk" }
 io-mockk-agent = { group = "io.mockk", name = "mockk-agent", version.ref = "io-mockk" }
@@ -66,11 +70,12 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization" }
-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
-sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 kotlin-parcelize = { id = "kotlin-parcelize" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 

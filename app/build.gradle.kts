@@ -1,33 +1,76 @@
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+
+    // Add the Google services Gradle plugin
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.monext.sdkexample"
     compileSdk = 36
+    version = getVersionName()
 
     defaultConfig {
         applicationId = "com.monext.sdkexample"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = getVersionCode()
+        versionName = getVersionName()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Définition du nom de l'apk
+        setProperty("archivesBaseName", "monext-android-sdk-app-demo")
+    }
+
+    // Signature de l'APK
+    signingConfigs {
+
+        // Configuration Release
+        create("release") {
+            // En CI : utiliser le keystore de production (si configuré)
+            if (System.getenv("CI") == "true") {
+                //  Signature pour les releases (CI/CD uniquement)
+                System.getenv("KEYSTORE_PATH")?.let {
+                    storeFile = file(System.getenv("KEYSTORE_PATH"))
+                    storePassword = System.getenv("KEYSTORE_PASSWORD")
+                    keyAlias = System.getenv("KEY_ALIAS")
+                    keyPassword = System.getenv("KEY_PASSWORD")
+                }
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+
+            // Assigner la signingConfig pour signer l'APK
+            signingConfig = signingConfigs.getByName("release")
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
+    applicationVariants.all {
+        outputs.all {
+            val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            // Récupération de la version SDK du gradle.properties
+            val versionName = getVersionName() // Version courante
+            val versionCode = getVersionCode() // Code du build
+
+            // Format : monext-android-sdk-app-1.0-123-release.apk
+            outputImpl.outputFileName = "monext-android-sdk-app-demo-${versionName}-${versionCode}-${name}.apk"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -44,11 +87,12 @@ android {
     }
 }
 
+fun getVersionName(): String = (project.extra["getVersionName"] as () -> String)()
+fun getVersionCode(): Int = (project.extra["getVersionCode"] as () -> Int)()
+
 dependencies {
 
     implementation(project(":monext"))
-    // # Faire un ./gradlew :monext:publishToMavenLocal pour publier en local et tester le aar généré
-    //implementation("com.monext:payment-sdk-android:1.0.0")
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
@@ -62,6 +106,12 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.junit.ktx)
+
+
+    // Import the Firebase BoM
+    implementation(platform(libs.firebase.bom))
+    // Add the dependency for the Firebase SDK for Google Analytics
+    implementation(libs.firebase.analytics)
 
     testImplementation(libs.junit.jupiter)
 
