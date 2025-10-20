@@ -7,6 +7,7 @@ import com.monext.sdk.internal.data.sessionstate.PaymentRedirectNoResponse
 import com.monext.sdk.internal.data.sessionstate.PaymentSuccess
 import com.monext.sdk.internal.api.model.PointOfSaleAddress
 import com.monext.sdk.internal.api.model.SessionInfo
+import com.monext.sdk.internal.data.sessionstate.PaymentOnholdPartner
 import com.monext.sdk.internal.threeds.model.PaymentSdkChallenge
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -30,6 +31,7 @@ internal data class SessionState(
     val pointOfSaleAddress: PointOfSaleAddress? = null,
     val returnUrl: String?,
     val paymentMethodsList: PaymentMethodsList? = null,
+    var paymentOnholdPartner: PaymentOnholdPartner? = null,
     val paymentRedirectNoResponse: PaymentRedirectNoResponse? = null,
     val paymentSuccess: PaymentSuccess? = null,
     val paymentFailure: PaymentFailure? = null,
@@ -43,6 +45,7 @@ internal enum class SessionStateType {
     PAYMENT_REDIRECT_NO_RESPONSE,
     PAYMENT_SUCCESS,
     PAYMENT_FAILURE,
+    PAYMENT_ONHOLD_PARTNER,
     PAYMENT_FAILURE_WITH_RETRY,
     PAYMENT_CANCELED,
     TOKEN_EXPIRED,
@@ -57,12 +60,13 @@ internal enum class SessionStateType {
             PAYMENT_FAILURE, PAYMENT_FAILURE_WITH_RETRY -> PaymentResult.TransactionState.PAYMENT_FAILURE
             PAYMENT_CANCELED -> PaymentResult.TransactionState.PAYMENT_CANCELED
             TOKEN_EXPIRED -> PaymentResult.TransactionState.TOKEN_EXPIRED
+            PAYMENT_ONHOLD_PARTNER -> PaymentResult.TransactionState.PAYMENT_PENDING
             else -> null
         }
 
     fun isFinalState() : Boolean =
         when(this) {
-            PAYMENT_SUCCESS, PAYMENT_FAILURE, PAYMENT_CANCELED, TOKEN_EXPIRED -> true
+            PAYMENT_SUCCESS, PAYMENT_FAILURE, PAYMENT_CANCELED, TOKEN_EXPIRED, PAYMENT_ONHOLD_PARTNER -> true
             else -> false
         }
 }

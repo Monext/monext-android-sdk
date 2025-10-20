@@ -13,6 +13,8 @@ import com.monext.sdk.PaymentOverlayToggle
 import com.monext.sdk.PaymentResult
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
+import com.monext.sdk.internal.data.sessionstate.CustomMessage
+import com.monext.sdk.internal.data.sessionstate.PaymentOnholdPartner
 import com.monext.sdk.internal.presentation.PaymentContainer
 import com.monext.sdk.internal.preview.PreviewSamples.Companion.buildSessionState
 import org.junit.Assert.assertEquals
@@ -46,52 +48,100 @@ class PaymentContainerTest {
     @Test
     fun withSuccessTicket() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_SUCCESS, )
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, "success_title")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, "success_title", "back_button")
     }
 
     @Test
     fun withSuccessTicketAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_SUCCESS)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, "success_title")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, "success_title", "back_button")
+    }
+
+    @Test
+    fun withPendingTicket() {
+        val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_ONHOLD_PARTNER)
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "pending_description", "back_button")
+    }
+
+    @Test
+    fun withPendingTicketAndRedirect() {
+        val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_ONHOLD_PARTNER)
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "pending_description", "back_button")
+    }
+
+    @Test
+    fun withPendingTicketWithCustomMessage() {
+        val paymentOnholdPartnerToUse = PaymentOnholdPartner(
+            message = CustomMessage(
+                type = "INFO",
+                localizedMessage = "blabla",
+                displayIcon = false
+            ),
+            selectedCardCode = "TEST",
+            selectedContractNumber = "TEST"
+        )
+
+        val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_ONHOLD_PARTNER, paymentOnholdPartner = paymentOnholdPartnerToUse)
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "back_button")
+    }
+
+    @Test
+    fun withPendingTicketWithCustomMessageAndRedirect() {
+        val paymentOnholdPartnerToUse = PaymentOnholdPartner(
+            message = CustomMessage(
+                type = "INFO",
+                localizedMessage = "blabla",
+                displayIcon = false
+            ),
+            selectedCardCode = "TEST",
+            selectedContractNumber = "TEST"
+        )
+
+        val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_ONHOLD_PARTNER, paymentOnholdPartner = paymentOnholdPartnerToUse)
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "back_button")
     }
 
     @Test
     fun withFailureDisplay() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_FAILURE)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, "failure_header")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, "failure_header", "back_button")
     }
 
     @Test
     fun withFailureDisplayAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_FAILURE)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, "failure_header")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, "failure_header", "back_button")
     }
 
     @Test
     fun withExpiredSessionDisplay() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.TOKEN_EXPIRED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, "expîred_header")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, "expîred_header", "back_button")
     }
 
     @Test
     fun withExpiredSessionAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.TOKEN_EXPIRED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, "expîred_header")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, "expîred_header", "back_button")
     }
 
     @Test
     fun withCancelSessionDisplay() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_CANCELED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, "cancel_header")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, "cancel_header", "back_button")
     }
 
     @Test
     fun withCancelSessionAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_CANCELED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, "cancel_header")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, "cancel_header", "back_button")
     }
 
-    private fun executeSessionStateTest(sessionState: SessionState, expectedTransactionState: PaymentResult.TransactionState, expectedTag : String) {
+    private fun executeSessionStateTest(
+        sessionState: SessionState,
+        expectedTransactionState: PaymentResult.TransactionState,
+        vararg expectedTags: String
+    ) {
         var paymentResult: PaymentResult? = null
         var showingChange = true
         composeTestRule.activity.setTestComposable {
@@ -112,16 +162,22 @@ class PaymentContainerTest {
             }
         }
 
-        composeTestRule.waitUntil {
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
             paymentResult is PaymentResult.PaymentCompleted
         }
         val paymentCompleted: PaymentResult.PaymentCompleted = paymentResult as PaymentResult.PaymentCompleted
         assertEquals(expectedTransactionState, paymentCompleted.finalState)
+
         if (sessionState.automaticRedirectAtSessionsEnd == true) {
-            composeTestRule.onNodeWithTag(expectedTag).assertDoesNotExist()
+            for (tag in expectedTags) {
+                composeTestRule.onNodeWithTag(tag).assertDoesNotExist()
+            }
             assertFalse(showingChange)
         } else {
-            composeTestRule.onNodeWithTag(expectedTag).assertIsDisplayed()
+            for (tag in expectedTags) {
+                composeTestRule.onNodeWithTag(tag).assertExists()
+                composeTestRule.onNodeWithTag(tag).assertIsDisplayed()
+            }
             assertTrue(showingChange)
         }
     }

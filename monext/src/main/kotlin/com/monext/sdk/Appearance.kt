@@ -83,6 +83,7 @@ class Appearance(
     val confirmationColor: Color = Defaults.confirmationColor,
     val onConfirmationColor: Color = Defaults.onConfirmationColor,
     val errorColor: Color = Defaults.errorColor,
+    val pendingColor: Color = Defaults.pendingColor,
 
     // MARK: Textfield
 
@@ -115,7 +116,10 @@ class Appearance(
     val successImage: Painter? = null,
 
     /// The image shown to the user on the failure screen when the transaction has failed
-    val failureImage: Painter? = null
+    val failureImage: Painter? = null,
+
+    /// The image shown to the user on the pending screen when the transaction has on hold
+    val pendingImage: Painter? = null
 ) {
 
     val textfieldLabelColor: Color = textfieldLabelColor ?: onBackgroundColor
@@ -189,6 +193,7 @@ class Appearance(
             val confirmationColor: Color = Colors.malachite
             val onConfirmationColor: Color = Colors.arsenic
             val errorColor: Color = Colors.alabamaCrimson
+            val pendingColor: Color = Colors.arsenic
 
             val buttonRadius: Dp = 24.dp
             val cardRadius: Dp = 16.dp

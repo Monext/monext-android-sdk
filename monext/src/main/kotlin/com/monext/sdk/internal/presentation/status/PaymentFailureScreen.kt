@@ -66,7 +66,8 @@ internal fun PaymentFailureScreen(amount: String, onRetry: () -> Unit, onExit: (
 
         Column(
             Modifier.background(theme.surfaceColor)
-                .padding(16.dp),
+                .padding(16.dp)
+                .testTag("back_button"),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AppButtonSecondaryOutlined(onExit) {
