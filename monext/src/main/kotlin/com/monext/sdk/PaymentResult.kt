@@ -25,6 +25,12 @@ sealed interface PaymentResult {
         PAYMENT_FAILURE,
 
         /**
+         * The transaction pending.
+         * This is a terminal state.
+         */
+        PAYMENT_PENDING,
+
+        /**
          * The user canceled the payment.
          * This is a terminal state.
          */

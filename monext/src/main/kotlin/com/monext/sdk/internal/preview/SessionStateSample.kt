@@ -11,8 +11,10 @@ import com.monext.sdk.internal.data.sessionstate.RedirectionData
 import com.monext.sdk.internal.api.model.SessionInfo
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
+import com.monext.sdk.internal.data.sessionstate.CustomMessage
 import com.monext.sdk.internal.data.sessionstate.FailureMessage
 import com.monext.sdk.internal.data.sessionstate.PaymentFailure
+import com.monext.sdk.internal.data.sessionstate.PaymentOnholdPartner
 import com.monext.sdk.internal.data.sessionstate.Ticket
 import com.monext.sdk.internal.data.sessionstate.Wallet
 
@@ -287,7 +289,17 @@ internal interface PreviewSamples {
             paymentFailure = null
         )
 
-        fun buildSessionState(automaticRedirect : Boolean, type: SessionStateType) : SessionState {
+        val paymentOnholdPartnerToUse = PaymentOnholdPartner(
+            message = CustomMessage(
+                type = "INFO",
+                localizedMessage = null,
+                displayIcon = false
+            ),
+            selectedCardCode = "TEST",
+            selectedContractNumber = "TEST"
+        )
+
+        fun buildSessionState(automaticRedirect : Boolean, type: SessionStateType, paymentOnholdPartner: PaymentOnholdPartner = paymentOnholdPartnerToUse) : SessionState {
 
             var paymentSuccessToUse : PaymentSuccess? = null
             if (type.equals(SessionStateType.PAYMENT_SUCCESS)) {
@@ -297,6 +309,8 @@ internal interface PreviewSamples {
                 SessionStateType.PAYMENT_FAILURE, SessionStateType.TOKEN_EXPIRED -> paymentFailure
                 else -> null;
             }
+
+
 
             return SessionState(
                 token = "fake_token",
@@ -313,6 +327,7 @@ internal interface PreviewSamples {
                 paymentMethodsList = null,
                 paymentRedirectNoResponse = null,
                 paymentSuccess = paymentSuccessToUse,
+                paymentOnholdPartner = paymentOnholdPartner,
                 paymentFailure = paymentFailureToUse)
         }
 

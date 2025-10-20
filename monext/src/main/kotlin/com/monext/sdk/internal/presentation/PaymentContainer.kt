@@ -15,6 +15,7 @@ import com.monext.sdk.internal.data.sessionstate.Wallet
 import com.monext.sdk.internal.presentation.status.LoadingSection
 import com.monext.sdk.internal.presentation.status.PaymentCanceledScreen
 import com.monext.sdk.internal.presentation.status.PaymentFailureScreen
+import com.monext.sdk.internal.presentation.status.PaymentPendingScreen
 import com.monext.sdk.internal.presentation.status.PaymentRedirectionScreen
 import com.monext.sdk.internal.presentation.status.PaymentSuccessScreen
 import com.monext.sdk.internal.presentation.status.TokenExpiredScreen
@@ -51,6 +52,11 @@ internal fun PaymentContainer(
             SessionStateType.PAYMENT_FAILURE -> onResult(
                 PaymentCompleted(
                     TransactionState.PAYMENT_FAILURE)
+            )
+            SessionStateType.PAYMENT_ONHOLD_PARTNER -> onResult(
+                PaymentCompleted(
+                    TransactionState.PAYMENT_PENDING
+                )
             )
             SessionStateType.PAYMENT_CANCELED -> onResult(
                 PaymentCompleted(
@@ -104,6 +110,15 @@ internal fun PaymentContainer(
                 sessionState.info?.formattedAmount ?: "",
                 onRetry = onRetry,
                 onExit = { onIsShowingChange?.invoke(false) })
+        }
+
+        SessionStateType.PAYMENT_ONHOLD_PARTNER -> {
+            sessionState.paymentOnholdPartner?.let { paymentOnholdPartner ->
+                PaymentPendingScreen(
+                    paymentOnholdPartner,
+                    onExit = { onIsShowingChange?.invoke(false) }
+                )
+            } ?: LoadingSection()
         }
 
         SessionStateType.PAYMENT_CANCELED -> {

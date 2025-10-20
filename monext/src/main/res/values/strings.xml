@@ -54,5 +54,7 @@
     <string name="payment_overlay_message">Please wait as we contact your bank.</string>
     <string name="card_network_selector_title">Please select your preferred card network.</string>
     <string name="compliancy_notice_message">We are fully compliant with the payment card industry data security standards.</string>
+    <string name="pending_title">Payment pending</string>
+    <string name="pending_description">Your payment is pending. Please contact your merchant for further information.</string>
 
 </resources>

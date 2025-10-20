@@ -38,4 +38,6 @@
     <string name="compliancy_notice_message">Nous sommes certifiés PCI-DSS.</string>
     <string name="payment_success_message">Votre paiement de %1$s a été validé. Votre commande %2$s est validée. Merci pour votre commande !</string>
     <string name="payment_canceled_message">Votre paiement a été annulé.</string>
+    <string name="pending_title">Paiement en attente</string>
+    <string name="pending_description">Votre paiement est en attente. Veuillez contacter votre commerçant pour plus d’informations.</string>
 </resources>

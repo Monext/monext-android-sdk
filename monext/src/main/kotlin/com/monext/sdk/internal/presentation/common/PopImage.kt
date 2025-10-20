@@ -6,9 +6,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -24,12 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
-import com.monext.sdk.internal.preview.PreviewWrapper
 
 @Composable
 internal fun PopImage(style: PopImageStyle) {
@@ -39,12 +35,14 @@ internal fun PopImage(style: PopImageStyle) {
     val circleColor = when (style) {
         is PopImageStyle.Success -> theme.confirmationColor
         is PopImageStyle.Failure -> theme.errorColor
+        is PopImageStyle.Pending -> theme.pendingColor
         is PopImageStyle.Custom -> Color.Transparent
     }
 
     val painter = when (style) {
         is PopImageStyle.Success -> painterResource(R.drawable.ic_checkmark_large)
         is PopImageStyle.Failure -> painterResource(R.drawable.ic_exclamationpoint_large)
+        is PopImageStyle.Pending -> painterResource(R.drawable.hourglass)
         is PopImageStyle.Custom -> style.painter
     }
 
@@ -75,22 +73,6 @@ internal fun PopImage(style: PopImageStyle) {
 internal sealed interface PopImageStyle {
     data object Success: PopImageStyle
     data object Failure: PopImageStyle
+    data object Pending: PopImageStyle
     data class Custom(val painter: Painter): PopImageStyle
-}
-
-@Preview
-@Composable
-internal fun PaymentSuccessSectionPreview() {
-    PreviewWrapper {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-
-            PopImage(PopImageStyle.Success)
-
-            PopImage(PopImageStyle.Failure)
-
-            PopImage(PopImageStyle.Custom(painterResource(R.drawable.logo_cards)))
-        }
-    }
 }

@@ -50,7 +50,8 @@ internal fun PaymentCanceledScreen(onExit: () -> Unit) {
 
         Column(
             Modifier.background(theme.surfaceColor)
-                .padding(16.dp),
+                .padding(16.dp)
+                .testTag("back_button"),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AppButtonSecondaryOutlined(onExit) {

@@ -14,24 +14,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.monext.sdk.LocalAppearance
 import com.monext.sdk.R
-import com.monext.sdk.internal.data.sessionstate.PaymentSuccess
-import com.monext.sdk.internal.api.model.SessionInfo
+import com.monext.sdk.internal.data.sessionstate.PaymentOnholdPartner
 import com.monext.sdk.internal.ext.bold
 import com.monext.sdk.internal.ext.foreground
+import com.monext.sdk.internal.ext.s16
 import com.monext.sdk.internal.ext.s18
 import com.monext.sdk.internal.ext.s24
 import com.monext.sdk.internal.presentation.common.AppButtonSecondaryFilled
+import com.monext.sdk.internal.presentation.common.HtmlWebView
 import com.monext.sdk.internal.presentation.common.PopImage
 import com.monext.sdk.internal.presentation.common.PopImageStyle
-import com.monext.sdk.internal.preview.PreviewSamples
-import com.monext.sdk.internal.preview.PreviewWrapper
 
 @Composable
-internal fun PaymentSuccessScreen(info: SessionInfo, successData: PaymentSuccess, onExit: () -> Unit) {
+internal fun PaymentPendingScreen(paymentOnholdPartner: PaymentOnholdPartner, onExit: () -> Unit) {
 
     val theme = LocalAppearance.current
 
@@ -45,36 +43,29 @@ internal fun PaymentSuccessScreen(info: SessionInfo, successData: PaymentSuccess
         ) {
 
             PopImage(
-                style = theme.successImage?.let { PopImageStyle.Custom(it) } ?: PopImageStyle.Success
+                style = theme.pendingImage?.let { PopImageStyle.Custom(it) } ?: PopImageStyle.Pending
             )
 
             Text(
-                stringResource(R.string.payment_success_header),
+                stringResource(R.string.pending_title),
                 style = theme.baseTextStyle.bold().s24()
                     .foreground(theme.onBackgroundColor),
-                modifier = Modifier.testTag("success_title")
+                modifier = Modifier.testTag("pending_header")
             )
 
-            Text(
-                stringResource(
-                    R.string.payment_success_message,
-                    info.formattedAmount,
-                    info.orderRef
-                ),
-                style = theme.baseTextStyle.bold().s18()
-                    .foreground(theme.onBackgroundColor)
-            )
-
-            if (successData.displayTicket) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (successData.ticket != null) {
-                        for (ticket in successData.ticket) {
-                            TicketItem(ticket)
-                        }
-                    }
-                }
+            if (!paymentOnholdPartner.message?.localizedMessage.isNullOrBlank()) {
+                HtmlWebView(
+                    paymentOnholdPartner.message.localizedMessage,
+                    transparent = true,
+                    fontSizePx = 16
+                )
+            } else {
+                Text(
+                    stringResource(R.string.pending_description),
+                    style = theme.baseTextStyle.s16()
+                        .foreground(theme.onBackgroundColor),
+                    modifier = Modifier.testTag("pending_description")
+                )
             }
         }
 
@@ -89,22 +80,6 @@ internal fun PaymentSuccessScreen(info: SessionInfo, successData: PaymentSuccess
                     style = theme.baseTextStyle.bold().s18()
                 )
             }
-        }
-    }
-}
-
-@Preview
-@Composable
-internal fun PaymentSuccessSectionPreview() {
-    PreviewWrapper {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-
-            PaymentSuccessScreen(
-                PreviewSamples.Companion.sessionStateSuccess.info!!,
-                PreviewSamples.Companion.sessionStateSuccess.paymentSuccess!!
-            ) {}
         }
     }
 }
