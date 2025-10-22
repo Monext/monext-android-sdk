@@ -279,21 +279,21 @@ jobs:
         id: version
         uses: ./.github/actions/setup-sdk-version
 
-#      # Publication sur Maven Central
-#      - name: Publish to Maven Central
-#        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
-#        env:
-#          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-#          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-#          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-#          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-#          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
-#
+      #      # Publication sur Maven Central
+      #      - name: Publish to Maven Central
+      #        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
+      #        env:
+      #          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+      #          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+      #          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+      #          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      #          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+      #          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+      #
 
-#      # Publication sur GitHub Packages
+      #      # Publication sur GitHub Packages
       - name: Create GitHub Release
-#        if: startsWith(github.ref, 'refs/tags/v')
+        #        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -409,8 +409,12 @@ jobs:
           RECENT_COMMITS=$(git log -5 --pretty=format:"• %s" --no-merges)
 
           # Sauvegarder dans les outputs
-          echo "message=${COMMIT_MSG}" >> $GITHUB_OUTPUT
-          echo "author=${COMMIT_AUTHOR}" >> $GITHUB_OUTPUT
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+          
           echo "recent_commits<<EOF" >> $GITHUB_OUTPUT
           echo "$RECENT_COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -450,12 +454,12 @@ jobs:
           ══════════════════════════════════════════════════════
           📝 Dernier changement:
           ${{ steps.commit_info.outputs.message }}
-    
+          
           📋 Changements récents:
           ${{ steps.commit_info.outputs.recent_commits }}
           ══════════════════════════════════════════════════════
           EOF
-        
+          
           echo "✓ Artefacts préparés"
           ls -lh qa-release/
 
@@ -529,7 +533,8 @@ jobs:
         if: |
           github.ref == 'refs/heads/develop' &&
           needs.test.result == 'success' &&
-          needs.sonarcloud.result == 'success'
+          needs.sonarcloud.result == 'success' &&
+          needs.build-apk-qa-release.result == 'success'
         run: |
           TEAMS_WEBHOOK_URL="${{ secrets.TEAMS_WEBHOOK_URL_QUALIF }}"
           SHOULD_SEND="yes"
