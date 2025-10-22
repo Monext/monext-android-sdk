@@ -8,13 +8,13 @@ class ThreeDSBusinessTest {
     private val underTest: ThreeDSBusiness = ThreeDSBusiness()
 
     @Test
-    fun convertValueIfCB_shouldReturnValue() {
-        assertEquals("visa", underTest.convertValueIfCB("visa"))
+    fun convertValueIfCB_shouldReturnCardTypeValueToSchemeValue() {
+        assertEquals("visa", underTest.convertCardTypeValueToSchemeValue("visa"))
     }
 
     @Test
-    fun convertValueIfCB_shouldConvert() {
-        assertEquals("cartesBancaires", underTest.convertValueIfCB("CB"))
+    fun convertValueIfCB_shouldConvertCardTypeValueToScheme() {
+        assertEquals("cartesBancaires", underTest.convertCardTypeValueToSchemeValue("CB"))
     }
 
     @Test

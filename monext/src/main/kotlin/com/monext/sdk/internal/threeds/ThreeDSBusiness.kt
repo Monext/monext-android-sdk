@@ -12,7 +12,7 @@ internal class ThreeDSBusiness {
         key: DirectoryServerSdkKey,
         schemeLogo: String
     ): SchemeConfiguration =
-        SchemeConfiguration.newSchemeConfiguration(convertValueIfCB(key.scheme))
+        SchemeConfiguration.newSchemeConfiguration(convertCardTypeValueToSchemeValue(key.scheme))
             .ids(Collections.singletonList(key.rid))
             .encryptionPublicKey(key.publicKey, null)
             .rootPublicKey(key.rootPublicKey)
@@ -23,10 +23,11 @@ internal class ThreeDSBusiness {
      * Fonction qui permet d'initier la configuration
      */
     internal fun createConfigParameters(): ConfigurationBuilder = ThreeDSConfiguration.createConfigParameters()
+
     /**
-     * Fonction qui converti notre carType "CB" en "cartesBancaires" pour la compatibilité du SDK 3DS
+     * Fonction qui converti notre carType en référence de scheme compatible avec le SDK 3DS
      */
-    internal fun convertValueIfCB(value:String): String {
-        return if(value.equals("CB", ignoreCase = true)) "cartesBancaires" else value
+    internal fun convertCardTypeValueToSchemeValue(value:String): String {
+        return if(value.equals("CB", ignoreCase = true)) "cartesBancaires" else value.lowercase()
     }
 }

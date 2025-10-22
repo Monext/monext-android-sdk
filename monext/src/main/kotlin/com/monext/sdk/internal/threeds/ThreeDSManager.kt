@@ -200,7 +200,7 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
     private suspend fun completeSchemeConfiguration(configurationBuilder: ConfigurationBuilder, cardType: String, sessionToken: String) {
         if (internalSDKContext.environment.isSandbox()) {
             val schemesFromServer = fetchSchemesFromServer(sessionToken)
-            val valueToCheck = threeDSBusiness.convertValueIfCB(cardType)
+            val valueToCheck = threeDSBusiness.convertCardTypeValueToSchemeValue(cardType)
             val schemeConfiguration = schemesFromServer.find { it.schemeName.equals(valueToCheck, ignoreCase = true) }
             if(schemeConfiguration == null) {
                 throw ThreeDsException(ThreeDsExceptionType.UNSUPPORTED_NETWORK, "Unable to find scheme for card type: $cardType")
@@ -257,7 +257,7 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
     }
 
     private fun getDSIdForCardType(cardType: String): String {
-        val schemeConfiguration = threeDS2Service!!.sdkInfo.schemeConfigurations.find { it.name.equals(threeDSBusiness.convertValueIfCB(cardType), ignoreCase = true) }
+        val schemeConfiguration = threeDS2Service!!.sdkInfo.schemeConfigurations.find { it.name.equals(threeDSBusiness.convertCardTypeValueToSchemeValue(cardType), ignoreCase = true) }
         if(schemeConfiguration == null) {
             throw ThreeDsException(ThreeDsExceptionType.UNSUPPORTED_NETWORK, "Unable to find scheme for card type: $cardType")
         }

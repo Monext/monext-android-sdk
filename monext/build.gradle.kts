@@ -396,9 +396,9 @@ dependencies {
     implementation(libs.io.coil.compose)
     implementation(libs.io.coil.network.okhttp)
 
-    // !! Attention la Lib Netcetera 2.5.3.0 est mise en Bundle du SDK pour etre buildée avec (il y a le jar et les dossiers 'jnilibs', 'res')
+    // !! Attention la Lib Netcetera 2.5.3.2 est mise en Bundle du SDK pour etre buildée avec (il y a le jar et les dossiers 'jnilibs', 'res')
     // Voir la documentation : https://3dss.netcetera.com/3dssdk/doc/2.25.0/android-integration
-    implementation(files("libs/netcetera-3ds-sdk-2.5.3.0-classes.jar"))
+    implementation(files("libs/netcetera-3ds-sdk-2.5.3.2-classes.jar"))
 
     //  Tests
     testImplementation(libs.junit.jupiter)
