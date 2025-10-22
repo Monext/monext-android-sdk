@@ -105,7 +105,7 @@ class ThreeDSManagerTest {
         every { sDKInfoMock.schemeConfigurations } returns mutableListOf(schemeInfoMock)
         every { schemeInfoMock.name } returns "CB"
         every { schemeInfoMock.ids } returns mutableListOf("000042")
-        every { threeDSBusiness.convertValueIfCB("CB") } returns "CB"
+        every { threeDSBusiness.convertCardTypeValueToSchemeValue("CB") } returns "CB"
         every { transactionMock.authenticationRequestParameters } returns authenticationRequestParametersMock
         // Base64 YWFhYS1iYmJi = aaaa-bbbb
         // Base64 eHh4eC15eXl5 = xxxx-yyyy
