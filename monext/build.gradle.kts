@@ -194,7 +194,7 @@ publishing {
                     developer {
                         id.set("monext")
                         name.set("Monext online Team")
-                        email.set("sdk-support@monext.fr")
+                        email.set("acceptation.squad3@monext.net")
                         organization.set("Monext")
                         organizationUrl.set("https://www.monext.com")
                     }

@@ -328,19 +328,18 @@ jobs:
         id: version
         uses: ./.github/actions/setup-sdk-version
 
-      #      # Publication sur Maven Central
-      #      - name: Publish to Maven Central
-      #        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
-      #        env:
-      #          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-      #          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-      #          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-      #          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-      #          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-      #          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
-      #
+      # Publication sur Maven Central
+      - name: Publish to Maven Central
+        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
 
-      #      # Publication sur GitHub Packages
+      # Publication sur GitHub Packages
       - name: Create GitHub Release
         #        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
