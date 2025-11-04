@@ -309,6 +309,10 @@ jobs:
           firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
           firebase_api_key: ${{ secrets.FIREBASE_APP_ID }}
 
+      - name: Get Version
+        id: version
+        uses: ./.github/actions/setup-sdk-version
+
       - name: Build Release AAR
         run: ./gradlew :monext:assembleRelease
         env:
@@ -322,11 +326,6 @@ jobs:
         with:
           name: sdk-aar
           path: monext/build/outputs/aar/*.aar
-
-      # RÉCUPÉRATION DE LA VERSION
-      - name: Get Version
-        id: version
-        uses: ./.github/actions/setup-sdk-version
 
       # Publication sur Maven Central
       - name: Publish to Maven Central

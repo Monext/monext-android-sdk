@@ -1,5 +1,6 @@
 import org.jetbrains.dokka.DokkaConfiguration.Visibility
 import org.jetbrains.dokka.gradle.DokkaTask
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -236,11 +237,16 @@ publishing {
 signing {
     isRequired = System.getenv("CI") == "true" && getVersionName() != "default"
 
-    useInMemoryPgpKeys(
-        System.getenv("SIGNING_KEY_ID"),
-        System.getenv("SIGNING_KEY"),
-        System.getenv("SIGNING_PASSWORD")
-    )
+    val signingKeyId = System.getenv("SIGNING_KEY_ID")
+    val signingKey = System.getenv("SIGNING_KEY")
+    val signingPassword = System.getenv("SIGNING_PASSWORD")
+
+    if (signingKeyId != null && signingKey != null && signingPassword != null) {
+        // Décoder la clé base64 en String
+        val decodedKey = String(Base64.getDecoder().decode(signingKey))
+        useInMemoryPgpKeys(signingKeyId, decodedKey, signingPassword)
+    }
+
     sign(publishing.publications["release"])
 }
 
