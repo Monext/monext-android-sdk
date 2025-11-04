@@ -68,6 +68,87 @@ jobs:
           echo "=== GIT LOG ==="
           git log -3 --pretty=format:"Commit: %h - %s (%an)" --no-merges
 
+      # ============================================
+      # DEBUG - Vérification des secrets GPG
+      # ============================================
+      - name: Debug GPG Configuration
+        env:
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          echo "🔍 Vérification de la configuration GPG..."
+          echo ""
+          
+          # 1. Vérifier que les variables sont définies (sans afficher les valeurs)
+          echo "1️⃣ Variables d'environnement :"
+          if [ -z "$SIGNING_KEY_ID" ]; then
+          echo "❌ SIGNING_KEY_ID est vide ou non défini"
+          else
+          echo "✅ SIGNING_KEY_ID est défini : ${SIGNING_KEY_ID}"
+          fi
+          
+          if [ -z "$SIGNING_KEY" ]; then
+          echo "❌ SIGNING_KEY est vide ou non défini"
+          else
+          echo "✅ SIGNING_KEY est défini"
+          fi
+          
+          if [ -z "$SIGNING_PASSWORD" ]; then
+          echo "❌ SIGNING_PASSWORD est vide ou non défini"
+          else
+          echo "✅ SIGNING_PASSWORD est défini"
+          fi
+          echo ""
+          
+          # 2. Décoder et importer la clé pour tester
+          echo "2️⃣ Test de décodage et import de la clé..."
+          if echo "$SIGNING_KEY" | base64 -d > /tmp/test-key.asc 2>/dev/null; then
+          echo "✅ Décodage base64 réussi"
+          
+          # Vérifier que c'est bien une clé GPG valide
+          if head -1 /tmp/test-key.asc | grep -q "BEGIN PGP"; then
+           echo "✅ Format de clé GPG valide détecté"
+           head -1 /tmp/test-key.asc
+          else
+           echo "❌ Le format ne ressemble pas à une clé GPG"
+           echo "Premiers caractères :"
+           head -c 100 /tmp/test-key.asc
+          fi
+          
+          # Tenter l'import
+          echo ""
+          echo "3️⃣ Test d'import dans GPG..."
+          if echo "$SIGNING_KEY" | base64 -d | gpg --batch --import 2>&1; then
+           echo "✅ Import GPG réussi"
+          
+           # Lister les clés importées
+           echo ""
+           echo "4️⃣ Clés GPG disponibles :"
+           gpg --list-secret-keys --keyid-format=long
+          
+           # Vérifier que le KEY_ID correspond
+           echo ""
+           echo "5️⃣ Vérification du KEY_ID..."
+           if gpg --list-secret-keys --keyid-format=long | grep -q "$SIGNING_KEY_ID"; then
+             echo "✅ Le KEY_ID correspond à une clé importée"
+           else
+             echo "❌ Le KEY_ID ne correspond à aucune clé importée"
+             echo "KEY_ID cherché : $SIGNING_KEY_ID"
+           fi
+          else
+           echo "❌ Échec de l'import GPG"
+          fi
+          else
+          echo "❌ Échec du décodage base64"
+          fi
+          
+          # Nettoyage
+          rm -f /tmp/test-key.asc
+          
+          echo ""
+          echo "🏁 Fin du debug"
+
       - name: Get commit information
         id: commit_info
         run: |
@@ -329,7 +410,7 @@ jobs:
 
       # Publication sur Maven Central
       - name: Publish to Maven Central
-        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository
+        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository --debug
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
