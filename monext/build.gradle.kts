@@ -1,6 +1,5 @@
 import org.jetbrains.dokka.DokkaConfiguration.Visibility
 import org.jetbrains.dokka.gradle.DokkaTask
-import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -10,11 +9,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.sonarqube)
-
     alias(libs.plugins.dokka)
+
     // Plugins pour la publication
     id("maven-publish")
     id("signing")
+    alias(libs.plugins.jreleaser)
     id("jacoco")
 }
 
@@ -96,12 +96,11 @@ android {
     // Options de packaging
     packaging {
         resources {
-            excludes +=
-                setOf(
-                    "/META-INF/{AL2.0,LGPL2.1}",
-                    "META-INF/LICENSE.md",
-                    "META-INF/LICENSE-notice.md"
-                )
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md"
+            )
             // Important pour Netcetera SDK
             pickFirsts += "META-INF/DEPENDENCIES"
         }
@@ -183,18 +182,17 @@ publishing {
                 description.set("SDK Android pour l'intégration de paiements sécurisés")
                 url.set("https://github.com/Monext/monext-android-sdk")
 
-                // TODO : A voir
-//                licenses {
-//                    license {
-//                        name.set("Proprietary")
-//                        url.set("https://www.monext.fr/legal/sdk-license")
-//                    }
-//                }
+                licenses {
+                    license {
+                        name.set("The Apache Software License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
 
                 developers {
                     developer {
                         id.set("monext")
-                        name.set("Monext online Team")
+                        name.set("Monext Online Team")
                         email.set("acceptation.squad3@monext.net")
                         organization.set("Monext")
                         organizationUrl.set("https://www.monext.com")
@@ -202,33 +200,55 @@ publishing {
                 }
 
                 scm {
-                    connection.set("scm:git:github.com/Monext/monext-android-sdk.git")
-                    developerConnection.set("scm:git:ssh://github.com/Monext/monext-android-sdk.git")
+                    connection.set("scm:git:https://github.com/Monext/monext-android-sdk.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/Monext/monext-android-sdk.git")
                     url.set("https://github.com/Monext/monext-android-sdk")
+                }
+
+                // Supprime la section dependencyManagement
+                withXml {
+                    val root = asNode()
+                    val nodes = root.get("dependencyManagement") as groovy.util.NodeList
+                    if (nodes.isNotEmpty()) {
+                        root.remove(nodes.first() as groovy.util.Node)
+                    }
+                    // Force les versions résolues pour toutes les dépendances
+                    val dependenciesNode = root.get("dependencies") as groovy.util.NodeList
+                    if (dependenciesNode.isNotEmpty()) {
+                        val deps = dependenciesNode.first() as groovy.util.Node
+                        deps.children().forEach { dep ->
+                            if (dep is groovy.util.Node) {
+                                val versionNode = dep.get("version") as groovy.util.NodeList
+                                // Si pas de version, ajoute la version résolue
+                                if (versionNode.isEmpty()) {
+                                    val groupId = (dep.get("groupId") as groovy.util.NodeList).first() as groovy.util.Node
+                                    val artifactId = (dep.get("artifactId") as groovy.util.NodeList).first() as groovy.util.Node
+
+                                    // Trouve la version résolue depuis les configurations
+                                    val resolvedVersion = project.configurations.getByName("releaseRuntimeClasspath")
+                                        .resolvedConfiguration.resolvedArtifacts
+                                        .find {
+                                            it.moduleVersion.id.group == groupId.text() &&
+                                                    it.moduleVersion.id.name == artifactId.text()
+                                        }?.moduleVersion?.id?.version
+
+                                    if (resolvedVersion != null) {
+                                        dep.appendNode("version", resolvedVersion)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
+    // TODO : Avoir pour delete après config OK (utilisé pour le push maven central en mode "staging", càd sans publish auto)
     repositories {
-        // Maven Central (Sonatype)
         maven {
-            name = "MavenCentral"
-            url = uri("https://central.sonatype.com/api/v1/publisher/upload")
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-        }
-
-        // GitHub Packages
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Monext/monext-android-sdk")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
+            name = "staging"
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
@@ -237,17 +257,64 @@ publishing {
 signing {
     isRequired = System.getenv("CI") == "true" && getVersionName() != "default"
 
-    val signingKeyId = System.getenv("SIGNING_KEY_ID")
-    val signingKey = System.getenv("SIGNING_KEY")
-    val signingPassword = System.getenv("SIGNING_PASSWORD")
-
-    if (signingKeyId != null && signingKey != null && signingPassword != null) {
-        // Décoder la clé base64 en String
-        val decodedKey = String(Base64.getDecoder().decode(signingKey))
-        useInMemoryPgpKeys(signingKeyId, decodedKey, signingPassword)
+    if (isRequired) {
+        // Utilise GPG du système (la clé sera importée dans le workflow)
+        useGpgCmd()
     }
 
     sign(publishing.publications["release"])
+}
+
+// CONFIGURATION JRELEASER
+jreleaser {
+    // Configuration du projet
+    project {
+        name.set("monext-android-sdk")
+        description.set("SDK Android pour l'intégration de paiements sécurisés")
+        authors.set(listOf("Monext Online Team"))
+        license.set("Apache-2.0")
+        copyright.set("2025 Monext")
+        links {
+            homepage.set("https://github.com/Monext/monext-android-sdk")
+        }
+    }
+
+    // Désactive la release GitHub automatique par JReleaser
+    release {
+        github {
+            enabled.set(false)
+        }
+    }
+
+    // Configuration du déploiement sur Maven Central
+    deploy {
+        maven {
+            mavenCentral {
+                create("sonatype") {
+                    active.set(org.jreleaser.model.Active.ALWAYS)
+                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository("build/staging-deploy")
+                    // Pour activer l'auto-release (à commenter pour le "mode stagging)
+                     applyMavenCentralRules.set(true)
+
+                    connectTimeout.set(20)
+                    readTimeout.set(60)
+                    retryDelay.set(10)
+                }
+            }
+        }
+    }
+
+    // Signature GPG
+    signing {
+        active.set(org.jreleaser.model.Active.ALWAYS)
+        armored.set(true)
+        verify.set(true)
+        // Configuration des clés GPG
+        publicKey.set(System.getenv("JRELEASER_GPG_PUBLIC_KEY") ?: "")
+        secretKey.set(System.getenv("JRELEASER_GPG_SECRET_KEY") ?: "")
+        passphrase.set(System.getenv("JRELEASER_GPG_PASSPHRASE") ?: "")
+    }
 }
 
 // Configuration SonarCloud
@@ -292,7 +359,7 @@ tasks {
         doLast {
             val apiKey = getApiKey()
             if (apiKey == "DEVELOPMENT_KEY_REPLACE_IN_PRODUCTION") {
-                logger.warn("⚠️  WARNING: Using development API key. Configure a real key for production builds.")
+                logger.warn("⚠️ WARNING: Using development API key. Configure a real key for production builds.")
             }
         }
     }
@@ -339,10 +406,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     description = "Generate Jacoco coverage report for both unit and instrumentation tests"
     group = "verification"
 
-    // Dépend des tests unitaires ET d'instrumentation si disponibles
-    /*dependsOn(tasks.matching {
-        it.name in listOf("testDebugUnitTest", "createDebugCoverageReport")
-    })*/
     dependsOn("testDebugUnitTest")
 
     reports {
