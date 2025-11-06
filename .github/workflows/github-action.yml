@@ -327,32 +327,32 @@ jobs:
           name: sdk-aar
           path: monext/build/outputs/aar/*.aar
 
-      # ============================================
-      # IMPORT ET CONFIGURATION DE LA CLÉ GPG
-      # ============================================
-      - name: Import GPG key
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        run: |
-          echo "📝 Import de la clé GPG pour la signature..."
-          echo "$SIGNING_KEY" | base64 -d | gpg --batch --import
-          echo "✅ Clé GPG importée avec succès"
-
-      - name: List GPG keys (verification)
-        run: |
-          echo "🔍 Vérification des clés importées :"
-          gpg --list-secret-keys --keyid-format=long
-
-      # Publication sur Maven Central
-      - name: Publish to Maven Central
-        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository --stacktrace
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+#      # ============================================
+#      # IMPORT ET CONFIGURATION DE LA CLÉ GPG
+#      # ============================================
+#      - name: Import GPG key
+#        env:
+#          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+#        run: |
+#          echo "📝 Import de la clé GPG pour la signature..."
+#          echo "$SIGNING_KEY" | base64 -d | gpg --batch --import
+#          echo "✅ Clé GPG importée avec succès"
+#
+#      - name: List GPG keys (verification)
+#        run: |
+#          echo "🔍 Vérification des clés importées :"
+#          gpg --list-secret-keys --keyid-format=long
+#
+#      # Publication sur Maven Central
+#      - name: Publish to Maven Central
+#        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository --stacktrace
+#        env:
+#          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+#          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+#          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+#          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+#          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
 
       # Publication sur GitHub Packages
       - name: Create GitHub Release
@@ -363,7 +363,7 @@ jobs:
             monext/build/outputs/aar/*.aar
             CHANGELOG.md
           generate_release_notes: true
-          draft: true # TODO : A voir quand Maven central sera ok
+          draft: false # TODO : A voir quand Maven central sera ok
           prerelease: false
           tag_name: ${{ github.ref_name }}
           name: Monext Online Android SDK Release v${{ steps.version.outputs.VERSION_NAME }}
