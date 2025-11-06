@@ -46,28 +46,6 @@ jobs:
           java-version: ${{ env.JDK_VERSION }}
           cache: 'gradle'  # Met en cache les dépendances Gradle pour accélérer les builds
 
-      #TODO : A Virer
-      - name: Debug GitHub Context
-        run: |
-          echo "=== EVENT ==="
-          echo "Event name: ${{ github.event_name }}"
-          echo ""
-
-          echo "=== COMMIT INFO ==="
-          echo "SHA: ${{ github.sha }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "Ref name: ${{ github.ref_name }}"
-          echo "Actor: ${{ github.actor }}"
-          echo ""
-
-          echo "=== HEAD COMMIT (if available) ==="
-          echo "Message: ${{ github.event.head_commit.message }}"
-          echo "Author: ${{ github.event.head_commit.author.name }}"
-          echo ""
-
-          echo "=== GIT LOG ==="
-          git log -3 --pretty=format:"Commit: %h - %s (%an)" --no-merges
-
       - name: Get commit information
         id: commit_info
         run: |
@@ -104,18 +82,15 @@ jobs:
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
           echo "author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
-          
+
           echo "recent_commits<<EOF" >> $GITHUB_OUTPUT
           echo "$RECENT_COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
           echo "✓ Commit message: ${COMMIT_MSG}"
           echo "✓ Author: ${COMMIT_AUTHOR}"
-
-
-
 
       # Installe le SDK Android nécessaire pour compiler
       - name: Setup Android SDK
@@ -133,10 +108,7 @@ jobs:
           firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
           firebase_api_key: ${{ secrets.FIREBASE_APP_ID }}
 
-      # ============================================
       # TESTS UNITAIRES (tests sur la JVM, sans Android)
-      # ============================================
-      # Tests unitaires ET génération du rapport JaCoCo
       - name: Run unit tests with coverage
         run: ./gradlew testDebugUnitTest --stacktrace
 
@@ -151,9 +123,7 @@ jobs:
             **/build/reports/jacoco/
             **/build/outputs/unit_test_code_coverage/
 
-      # ============================================
       # TESTS Android
-      # ============================================
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -274,12 +244,10 @@ jobs:
     name: Build and Publish SDK
     runs-on: ubuntu-latest
     needs: [test, sonarcloud]
-    if:
-      contains('
-      refs/heads/main
-      refs/heads/master
-      refs/heads/release
-      ', github.ref)
+    if: |
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/master' ||
+      startsWith(github.ref, 'refs/heads/release/')
 
     steps:
       - name: Checkout code
@@ -297,12 +265,6 @@ jobs:
         with:
           cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
 
-      - name: Decode and save keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/keystore.jks
-
       - name: Setup Google Services
         uses: ./.github/actions/setup-google-services
         with:
@@ -313,6 +275,20 @@ jobs:
         id: version
         uses: ./.github/actions/setup-sdk-version
 
+      # IMPORT GPG KEY
+      - name: Import GPG key
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo "📝 Import de la clé GPG pour la signature..."
+          echo "$SIGNING_KEY" | base64 -d | gpg --batch --import
+          echo ""
+          echo "🔍 Vérification des clés importées :"
+          gpg --list-secret-keys --keyid-format=long
+          echo ""
+          echo "✅ Clé GPG importée avec succès"
+
+      # BUILD & DOCUMENTATION
       - name: Build Release AAR
         run: ./gradlew :monext:assembleRelease
         env:
@@ -327,36 +303,55 @@ jobs:
           name: sdk-aar
           path: monext/build/outputs/aar/*.aar
 
-#      # ============================================
-#      # IMPORT ET CONFIGURATION DE LA CLÉ GPG
-#      # ============================================
-#      - name: Import GPG key
-#        env:
-#          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-#        run: |
-#          echo "📝 Import de la clé GPG pour la signature..."
-#          echo "$SIGNING_KEY" | base64 -d | gpg --batch --import
-#          echo "✅ Clé GPG importée avec succès"
-#
-#      - name: List GPG keys (verification)
-#        run: |
-#          echo "🔍 Vérification des clés importées :"
-#          gpg --list-secret-keys --keyid-format=long
-#
-#      # Publication sur Maven Central
-#      - name: Publish to Maven Central
-#        run: ./gradlew :monext:publishReleasePublicationToMavenCentralRepository --stacktrace
-#        env:
-#          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-#          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-#          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-#          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-#          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-#          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+      # Sign le bundle
+      - name: Publish and sign artifacts
+        run: ./gradlew :monext:publishReleasePublicationToStagingRepository --stacktrace
+        env:
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          THREEDS_API_ACCESS_KEY: ${{ secrets.THREEDS_API_ACCESS_KEY }}
+
+      # Préparation de la clé GPG pour la signature Maven Central
+      - name: Prepare GPG keys for JReleaser
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo "📝 Extraction des clés GPG..."
+
+          # Décode la clé complète
+          echo "$SIGNING_KEY" | base64 -d > /tmp/complete-key.asc
+
+          # Importe dans GPG temporairement
+          gpg --batch --import /tmp/complete-key.asc
+
+          # Récupère le KEY_ID
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | awk '{print $2}' | cut -d'/' -f2 | head -1)
+          echo "Key ID: $KEY_ID"
+
+          # Exporte la clé PUBLIQUE
+          gpg --armor --export $KEY_ID > /tmp/public-key.asc
+
+          # Exporte la clé PRIVÉE
+          gpg --armor --export-secret-keys $KEY_ID > /tmp/secret-key.asc
+
+          # Met les chemins dans l'environnement
+          echo "GPG_PUBLIC_KEY_FILE=/tmp/public-key.asc" >> $GITHUB_ENV
+          echo "GPG_SECRET_KEY_FILE=/tmp/secret-key.asc" >> $GITHUB_ENV
+
+          echo "✅ Clés GPG préparées"
+
+      # PUBLICATION MAVEN CENTRAL via JReleaser
+      - name: Deploy to Maven Central (Staging)
+        run: ./gradlew :monext:jreleaserDeploy --no-configuration-cache --stacktrace
+        env:
+          JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ env.GPG_PUBLIC_KEY_FILE }}
+          JRELEASER_GPG_SECRET_KEY: ${{ env.GPG_SECRET_KEY_FILE }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.SIGNING_PASSWORD }}
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Publication sur GitHub Packages
       - name: Create GitHub Release
-        #        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -371,7 +366,6 @@ jobs:
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
   # ============================================
   # ============================================
@@ -406,9 +400,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # ============================================
+      - name: Decode and save keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/keystore.jks
+          echo "✓ Keystore decoded"
+
       # RÉCUPÉRATION DE LA VERSION
-      # ============================================
       - name: Get Version
         id: version
         uses: ./.github/actions/setup-sdk-version
@@ -419,14 +416,7 @@ jobs:
           firebase_app_id: ${{ secrets.FIREBASE_APP_ID }}
           firebase_api_key: ${{ secrets.FIREBASE_CURRENT_KEY }}
 
-      - name: Decode and save keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/keystore.jks
-          echo "✓ Keystore decoded"
-
-      # ============================================
       # BUILD DE L'APP DÉMO (compile automatiquement le SDK et signe l'APK)
-      # ============================================
       - name: Build Demo App and SDK
         run: |
           echo "📱 Building app (will automatically build SDK in Release mode)..."
@@ -475,9 +465,9 @@ jobs:
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
           echo "author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
-          
+
           echo "recent_commits<<EOF" >> $GITHUB_OUTPUT
           echo "$RECENT_COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -491,14 +481,14 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir -p qa-release
-          
+
           # Copier l'APK de l'app demo
           cp app/build/outputs/apk/release/*.apk qa-release/
-          
+
           # Récupération du fileName
           APK_FILE=$(find qa-release -name "*.apk" | head -1)
           APK_FILENAME=$(basename "$APK_FILE")
-          
+
           # Créer le fichier de release notes
           cat > qa-release/RELEASE_NOTES.txt <<EOF
           ══════════════════════════════════════════════════════
@@ -507,22 +497,22 @@ jobs:
           📱 Fichier APK
           Nom original: ${APK_FILENAME}
           Taille: $(du -h "$APK_FILE" | cut -f1)
-          
+
           Version SDK    : ${{ steps.version.outputs.VERSION_NAME }}
           Build Number   : ${{ steps.version.outputs.VERSION_CODE }}
           Branch         : ${{ github.ref_name }}
           Date           : $(date +'%Y-%m-%d %H:%M:%S')
           Auteur         : ${{ github.actor }}
-          
+
           ══════════════════════════════════════════════════════
           📝 Dernier changement:
           ${{ steps.commit_info.outputs.message }}
-          
+
           📋 Changements récents:
           ${{ steps.commit_info.outputs.recent_commits }}
           ══════════════════════════════════════════════════════
           EOF
-          
+
           echo "✓ Artefacts préparés"
           ls -lh qa-release/
 
@@ -541,7 +531,7 @@ jobs:
         run: |
           # Recupération du Service Account pour la connexion
           echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d > firebase-sa.json
-          
+
           # Définir la variable d'environnement
           echo "GOOGLE_APPLICATION_CREDENTIALS=${{ github.workspace }}/firebase-sa.json" >> $GITHUB_ENV
           echo "✓ Firebase authentication configured"
@@ -550,14 +540,14 @@ jobs:
         run: |
           APK_FILE=$(find qa-release -name "*.apk" | head -1)
           APK_FILENAME=$(basename "$APK_FILE")
-          
+
           echo "📤 Uploading ${APK_FILENAME} to Firebase..."
-          
+
           firebase appdistribution:distribute "$APK_FILE" \
             --app "${{ secrets.FIREBASE_APP_ID }}" \
             --groups "qa-team, squad3, monext-android" \
             --release-notes-file "qa-release/RELEASE_NOTES.txt"
-          
+
           echo "✅ APK uploaded successfully to Firebase App Distribution"
 
       - name: Cleanup files
@@ -602,7 +592,7 @@ jobs:
           TEAMS_WEBHOOK_URL="${{ secrets.TEAMS_WEBHOOK_URL_QUALIF }}"
           SHOULD_SEND="yes"
           NOTIFICATION_TYPE="QA"
-          
+
           echo "webhook_url=${TEAMS_WEBHOOK_URL}" >> $GITHUB_OUTPUT
           echo "should_send=${SHOULD_SEND}" >> $GITHUB_OUTPUT
           echo "notif_type=${NOTIFICATION_TYPE}" >> $GITHUB_OUTPUT
@@ -614,8 +604,8 @@ jobs:
       - name: Should send Release Notification
         id: teams_notif_release
         if: |
-          (github.ref == 'refs/heads/main' || 
-           github.ref == 'refs/heads/master' || 
+          (github.ref == 'refs/heads/main' ||
+           github.ref == 'refs/heads/master' ||
            startsWith(github.ref, 'refs/heads/release/') ||
            startsWith(github.ref, 'refs/tags/v'))
         run: |
@@ -623,7 +613,7 @@ jobs:
           SHOULD_SEND="yes"
           NOTIFICATION_TYPE="Release"
           BUILD_RESULT="${{ needs.build-and-publish-release.result }}"
-          
+
           # Check du statut
           if [[ "$BUILD_RESULT" == "success" ]]; then
           ICON_COLOR="Good"
@@ -638,7 +628,7 @@ jobs:
           ICON="Warning"
           STATUS_TEXT="⚠️ Unknow"
           fi
-          
+
           # On passe les variables via outputs
           echo "webhook_url=${TEAMS_WEBHOOK_URL}" >> $GITHUB_OUTPUT
           echo "should_send=${SHOULD_SEND}" >> $GITHUB_OUTPUT
@@ -646,7 +636,7 @@ jobs:
           echo "icon_color=${ICON_COLOR}" >> $GITHUB_OUTPUT
           echo "icon=${ICON}" >> $GITHUB_OUTPUT
           echo "status_text=${STATUS_TEXT}" >> $GITHUB_OUTPUT
-          
+
           echo "Should send Release notification => ${SHOULD_SEND} (status: ${STATUS_TEXT})"
 
       # ============================================
@@ -681,9 +671,9 @@ jobs:
             EXTRA_MESSAGE="Publication sur Maven Central et GitHub Packages."
             FIREBASE_ACTION=""
           fi
-          
+
           echo "Sending ${NOTIF_TYPE} notification to Teams..."
-          
+
           curl -X POST "${WEBHOOK_URL}" \
                -H "Content-Type: application/json" \
                -d @- << EOF
@@ -777,5 +767,5 @@ jobs:
             ]
           }
           EOF
-          
+
           echo "✅ ${NOTIF_TYPE} notification sent successfully"
