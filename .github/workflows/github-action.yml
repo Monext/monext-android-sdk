@@ -358,7 +358,7 @@ jobs:
             monext/build/outputs/aar/*.aar
             CHANGELOG.md
           generate_release_notes: true
-          draft: true # TODO : A voir quand Maven central sera ok
+          draft: false # TODO : A voir quand Maven central sera ok
           prerelease: false
           tag_name: ${{ github.ref_name }}
           name: Monext Online Android SDK Release v${{ steps.version.outputs.VERSION_NAME }}
