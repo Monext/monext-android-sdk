@@ -662,6 +662,7 @@ jobs:
                         "title": "📱 Ouvrir Firebase Console",
                         "url": "https://console.firebase.google.com/project/monext-android-sdk/appdistribution/app/android:com.monext.sdkexample/releases"
                       },'
+            RELEASE_ACTION=""
           else
             WEBHOOK_URL="${{ steps.teams_notif_release.outputs.webhook_url }}"
             NOTIF_TYPE="${{ steps.teams_notif_release.outputs.notif_type }}"
@@ -670,6 +671,16 @@ jobs:
             STATUS_TEXT="${{ steps.teams_notif_release.outputs.status_text }}"
             EXTRA_MESSAGE="Publication sur Maven Central et GitHub Packages."
             FIREBASE_ACTION=""
+            RELEASE_ACTION='
+                        {
+                          "type": "Action.OpenUrl",
+                          "title": "🚀 Voir la release",
+                          "url": "https://github.com/${{ github.repository }}/releases"
+                        },{
+                          "type": "Action.OpenUrl",
+                          "title": "📱 Voir sur Maven Central",
+                          "url": "https://central.sonatype.com/artifact/com.monext/monext-android-sdk"
+                        },'
           fi
 
           echo "Sending ${NOTIF_TYPE} notification to Teams..."
@@ -756,6 +767,7 @@ jobs:
                   ],
                   "actions": [
                     ${FIREBASE_ACTION}
+                    ${RELEASE_ACTION}
                     {
                       "type": "Action.OpenUrl",
                       "title": "📊 Voir le build",
