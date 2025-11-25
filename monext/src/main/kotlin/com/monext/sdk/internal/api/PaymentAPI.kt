@@ -42,6 +42,9 @@ internal interface PaymentAPI {
     @Throws(NetworkError::class)
     suspend fun sdkPaymentRequest(sessionToken: String, params: AuthenticationResponse): SessionState
 
+    @Throws(NetworkError::class)
+    suspend fun isDone(sessionToken: String, cardCode: String, timestamp: Long = System.currentTimeMillis()): Boolean
+
     fun updateContext(context: InternalSDKContext)
 }
 
@@ -155,6 +158,30 @@ internal class PaymentAPIImpl(
         val baseUrl = buildBaseUrl(environment)
         val url = appendPath(baseUrl, sessionToken, "SdkPaymentRequest")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
+        return makeRequest(httpRequest)
+    }
+
+    /**
+     * GET /token/{token}/cardCode/(cardCode)/ActiveWaiting/isDone?timestamp=(timestamp)
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @Throws(NetworkError::class)
+    override suspend fun isDone(sessionToken: String, cardCode: String, timestamp: Long): Boolean {
+        val baseUrl = buildBaseUrl(environment)
+
+        // build path-only URL (no query)
+        val urlNoQuery = appendPath(baseUrl, sessionToken, "cardCode", cardCode, "activewaiting", "isDone")
+
+        val uriWithQuery = URI(
+            urlNoQuery.protocol,
+            urlNoQuery.authority,
+            urlNoQuery.path,
+            "timestamp=$timestamp",
+            null
+        )
+        val finalUrl = uriWithQuery.toURL()
+
+        val httpRequest = buildHttpRequest(finalUrl, method = HttpMethod.GET)
         return makeRequest(httpRequest)
     }
 

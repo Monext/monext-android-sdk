@@ -2,7 +2,9 @@ package com.monext.sdk.internal.presentation.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -20,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
@@ -48,7 +51,8 @@ import com.monext.sdk.internal.util.FieldAssistant
 internal fun FormTextField(
     text: String,
     onTextChanged: (String) -> Unit,
-    labelText: String,
+    labelText: String?,
+    placeholder: String? = null,
     modifier: Modifier = Modifier,
     useOnSurfaceStyle: Boolean = false,
     assistant: FieldAssistant,
@@ -101,7 +105,7 @@ internal fun FormTextField(
                     null
                 }
             },
-        textStyle = formTextStyle.copy(fontSize = formTextSize),//.copy(fontSize = resizedTextSize),
+        textStyle = formTextStyle.copy(fontSize = formTextSize),
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
 
@@ -110,16 +114,47 @@ internal fun FormTextField(
 
         interactionSource = interactionSource,
         decorationBox = { innerTextField ->
+            val useFloatingLabel = !labelText.isNullOrBlank()
+
+            val customInner: @Composable () -> Unit = {
+                if (useFloatingLabel) {
+                    innerTextField()
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        innerTextField()
+                        if (text.isBlank() && !placeholder.isNullOrBlank()) {
+                            Text(
+                                placeholder,
+                                style = theme.baseTextStyle.s12(),
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                            )
+                        }
+                    }
+                }
+            }
+
             OutlinedTextFieldDefaults.DecorationBox(
                 value = text,
-                innerTextField = innerTextField,
+                innerTextField = customInner,
                 enabled = true,
                 singleLine = true,
                 visualTransformation = visualTransformation,
                 interactionSource = interactionSource,
                 isError = isError,
-                label = {
-                    Text(labelText, style = theme.baseTextStyle.s12())
+                label = if (useFloatingLabel) {
+                    { Text(labelText, style = theme.baseTextStyle.s12()) }
+                } else {
+                    null
+                },
+                placeholder = if (useFloatingLabel) {
+                    {
+                        placeholder?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = theme.baseTextStyle.s12())
+                        }
+                    }
+                } else {
+                    null
                 },
                 trailingIcon = if (showsAccessory) {
                     {
@@ -216,7 +251,8 @@ internal fun FormTextFieldPreview() {
 
             FormTextField(
                 text, txtChanged,
-                labelText = "CVV",
+                labelText = null,
+                placeholder = "Sans label, placeholder statique",
                 useOnSurfaceStyle = false,
                 assistant = CvvAssistant,
                 issuer = null,
@@ -245,7 +281,8 @@ internal fun FormTextFieldPreview() {
 
             FormTextField(
                 text, txtChanged,
-                labelText = "CVV",
+                labelText = null,
+                placeholder = "Statique sur surface",
                 useOnSurfaceStyle = true,
                 assistant = CvvAssistant,
                 issuer = null,

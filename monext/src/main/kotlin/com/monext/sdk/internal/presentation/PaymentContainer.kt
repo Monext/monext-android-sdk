@@ -12,6 +12,7 @@ import com.monext.sdk.internal.data.FormData
 import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
 import com.monext.sdk.internal.data.sessionstate.Wallet
+import com.monext.sdk.internal.presentation.status.ActiveWaitingScreen
 import com.monext.sdk.internal.presentation.status.LoadingSection
 import com.monext.sdk.internal.presentation.status.PaymentCanceledScreen
 import com.monext.sdk.internal.presentation.status.PaymentFailureScreen
@@ -118,6 +119,12 @@ internal fun PaymentContainer(
                     paymentOnholdPartner,
                     onExit = { onIsShowingChange?.invoke(false) }
                 )
+            } ?: LoadingSection()
+        }
+
+        SessionStateType.ACTIVE_WAITING -> {
+            sessionState.activeWaiting?.let { activeWaiting ->
+                ActiveWaitingScreen(activeWaiting)
             } ?: LoadingSection()
         }
 
