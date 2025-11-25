@@ -7,17 +7,21 @@ import com.monext.sdk.MnxtSDKContext
 import com.monext.sdk.SdkTestHelper
 import com.monext.sdk.internal.api.PaymentAPI
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
+import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.preview.PreviewSamples
+import com.monext.sdk.internal.preview.PreviewSamples.Companion.sessionStateActiveWaiting
 import com.monext.sdk.internal.threeds.ThreeDSManager
 import com.monext.sdk.internal.threeds.model.ChallengeUseCaseCallback
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -225,6 +229,39 @@ class SessionStateRepositoryTest {
         // Test
         underTest.threeDSManager = newThreeDSManager
         assertEquals(newThreeDSManager, underTest.threeDSManager)
+    }
+
+    @Test
+    fun isDone() = runTest(testDispatcher) {
+        underTest.initializeSessionState(token)
+        underTest.animateSessionStateChange(sessionStateActiveWaiting)
+
+        // Mock correctly the method with the timestamp param
+        coEvery { paymentAPI.isDone(token, "MBWAY", any()) } returns true
+        coEvery { underTest.updateSessionState(token) } returns Unit
+
+        underTest.isDone()
+
+        coVerify(exactly = 1) { paymentAPI.isDone(token, "MBWAY", any()) }
+        coVerify { underTest.updateSessionState(token) }
+    }
+
+    @Test
+    fun isDone_whenFalseThenTrue_pollsAndUpdates() = runTest(testDispatcher) {
+        underTest.initializeSessionState(token)
+        underTest.animateSessionStateChange(sessionStateActiveWaiting)
+        
+        coEvery { paymentAPI.isDone(token, "MBWAY", any()) } returnsMany listOf(false, true)
+        coEvery { underTest.updateSessionState(token) } returns Unit
+
+        val job = launch { underTest.isDone() }
+
+        testScheduler.advanceTimeBy(3_000)
+
+        job.join()
+
+        coVerify(atLeast = 2) { paymentAPI.isDone(token, "MBWAY", any()) }
+        coVerify { underTest.updateSessionState(token) }
     }
 
 }

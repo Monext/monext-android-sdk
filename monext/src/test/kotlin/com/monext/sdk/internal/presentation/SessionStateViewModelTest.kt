@@ -7,6 +7,8 @@ import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
 import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.api.model.response.SessionState
+import com.monext.sdk.internal.data.FormData
+import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.data.SessionStateRepository
 import com.monext.sdk.internal.preview.PreviewSamples
 import com.monext.sdk.internal.threeds.ThreeDSManager
@@ -194,6 +196,56 @@ class SessionStateViewModelTest {
         // Verif
         coVerify { underTest.makeWalletPayment(paymentAttemptWalletCB.selectedWallet, paymentAttemptWalletCB.walletFormData, any()) }
         assertFalse(underTest.sessionLoading.value)
+    }
+
+    @Test
+    fun makePaymentMethodPaymentShouldMakeSecuredPaymentWhenSecuredParamsNotEmpty() = runTest(testDispatcher) {
+        // Data
+        val paymentMethodData = SdkTestHelper.createPaymentMethodData(
+            cardCode = "MBWAY",
+            hasForm = true
+        )
+        val formData = FormData.AlternativePaymentMethodForm(
+            saveCard = false,
+            params = emptyMap(),
+            securedParams = mapOf("PHONENUMBER" to "+3306301010")
+        )
+
+        coEvery { sessionStateRepositoryMock.makeSecuredPayment(any()) } returns Unit
+
+        underTest.makePaymentMethodPayment(
+            selectedPaymentMethod = PaymentMethod. fromData(paymentMethodData),
+            paymentFormData = formData,
+            contextMock
+        ) {}
+
+        // Verify
+        coVerify(exactly = 1) { sessionStateRepositoryMock.makeSecuredPayment(any()) }
+    }
+
+    @Test
+    fun makePaymentMethodPaymentShouldMakePaymentWhenSecuredParamsEmpty() = runTest(testDispatcher) {
+        // Data
+        val paymentMethodData = SdkTestHelper.createPaymentMethodData(
+            cardCode = "PAYPAL",
+            hasForm = true
+        )
+        val formData = FormData.AlternativePaymentMethodForm(
+            saveCard = true,
+            params = emptyMap(),
+            securedParams = emptyMap()
+        )
+
+        coEvery { sessionStateRepositoryMock.makePayment(any()) } returns Unit
+
+        underTest.makePaymentMethodPayment(
+            selectedPaymentMethod = PaymentMethod. fromData(paymentMethodData),
+            paymentFormData = formData,
+            contextMock
+        ) {}
+
+        // Verify
+        coVerify(exactly = 1) { sessionStateRepositoryMock.makePayment(any()) }
     }
 
 }

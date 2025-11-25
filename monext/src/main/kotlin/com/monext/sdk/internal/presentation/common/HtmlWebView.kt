@@ -4,6 +4,8 @@ import android.graphics.Color
 import android.view.View
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import java.util.Locale
 import androidx.compose.ui.graphics.Color as ComposeColor
@@ -15,6 +17,7 @@ fun HtmlWebView(
     transparent: Boolean = true,
     textColor: ComposeColor? = null,
     fontSizePx: Int? = null,
+    testTag: String? = null,
 ) {
     val colorCss = textColor?.let { composeColorToCss(it) }
 
@@ -37,6 +40,7 @@ fun HtmlWebView(
     }
 
     AndroidView(
+        modifier = Modifier.testTag(testTag ?: "html_web_view"),
         factory = { context ->
             WebView(context).apply {
                 settings.javaScriptEnabled = enableJs

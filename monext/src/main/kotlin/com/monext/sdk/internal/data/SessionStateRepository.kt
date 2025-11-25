@@ -15,6 +15,7 @@ import com.monext.sdk.internal.threeds.ThreeDSManager
 import com.monext.sdk.internal.threeds.model.AuthenticationResponse
 import com.monext.sdk.internal.threeds.model.ChallengeUseCaseCallback
 import com.monext.sdk.internal.threeds.model.SdkChallengeData
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.net.URI
@@ -30,6 +31,8 @@ internal class SessionStateRepository(
     private var token: String? = null
 
     val returnURLString = URI("https", internalSDKContext.environment.host, null).toString()
+
+    private var UNKNOWN_ERROR = "unknown error"
 
     suspend fun initializeSessionState(token: String) {
         if (this.token == token) return
@@ -89,6 +92,32 @@ internal class SessionStateRepository(
         }
     }
 
+    suspend fun isDone() {
+        try {
+            while (true) {
+                val currentState = sessionState.value ?: return
+                val sessionToken = currentState.token
+                val cardCode = currentState.activeWaiting?.cardCode ?: return
+
+                val done = try {
+                    paymentAPI.isDone(sessionToken, cardCode)
+                } catch (t: Throwable) {
+                    internalSDKContext.logger.e(TAG, "error when call isDone ${t.localizedMessage ?:UNKNOWN_ERROR}", t)
+                    return
+                }
+
+                if (done) {
+                    updateSessionState(sessionToken)
+                    return
+                } else {
+                    delay(3_000)
+                }
+            }
+        } catch (t: Throwable) {
+            internalSDKContext.logger.e(TAG, "error when call isDone ${t.localizedMessage ?: UNKNOWN_ERROR}", t)
+        }
+    }
+
     /**
      * Lance le flow Challenge
      */
@@ -113,7 +142,7 @@ internal class SessionStateRepository(
             val token = token ?: throw INVALID_TOKEN_EXCEPTION
             paymentAPI.availableCardNetworks(token, params)
         } catch (t: Throwable) {
-            internalSDKContext.logger.e(TAG, "error when call availableCardNetworks ${t.localizedMessage ?: "unknown error"}", t)
+            internalSDKContext.logger.e(TAG, "error when call availableCardNetworks ${t.localizedMessage ?: UNKNOWN_ERROR}", t)
             null
         }
     }
@@ -122,11 +151,11 @@ internal class SessionStateRepository(
         try {
             animateSessionStateChange(callback())
         } catch (t: Throwable) {
-            internalSDKContext.logger.e(TAG, "error when call makeRequest ${t.localizedMessage ?: "unknown error"}", t)
+            internalSDKContext.logger.e(TAG, "error when call makeRequest ${t.localizedMessage ?: UNKNOWN_ERROR}", t)
         }
     }
 
-    protected fun animateSessionStateChange(sState: SessionState) {
+    internal fun animateSessionStateChange(sState: SessionState) {
         _sessionState.value = sState
     }
 

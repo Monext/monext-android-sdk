@@ -11,6 +11,7 @@ import com.monext.sdk.internal.data.sessionstate.RedirectionData
 import com.monext.sdk.internal.api.model.SessionInfo
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
+import com.monext.sdk.internal.data.sessionstate.ActiveWaiting
 import com.monext.sdk.internal.data.sessionstate.CustomMessage
 import com.monext.sdk.internal.data.sessionstate.FailureMessage
 import com.monext.sdk.internal.data.sessionstate.PaymentFailure
@@ -287,6 +288,30 @@ internal interface PreviewSamples {
             paymentRedirectNoResponse = null,
             paymentSuccess = paymentSuccess,
             paymentFailure = null
+        )
+
+        val activeWaiting = ActiveWaiting(
+            needActiveWaitingAction = false,
+            message = null,
+            cardCode = "MBWAY",
+            contractNumber = "MBWAY",
+            walletCardIndex = 0,
+            merchantReturnUrl = FAKE_URL
+        )
+
+        val sessionStateActiveWaiting = SessionState(
+            token = "fake_token",
+            type = SessionStateType.ACTIVE_WAITING,
+            creationDate = "Tue Mar 25 12:33:22 CET 2025",
+            cancelUrl = FAKE_URL,
+            pointOfSale = "POS_Fake",
+            language = "en",
+            returnUrl = FAKE_URL,
+            automaticRedirectAtSessionsEnd = false,
+            info = sessionInfo,
+            pointOfSaleAddress = posAddress,
+            isSandbox = true,
+            activeWaiting = activeWaiting
         )
 
         val paymentOnholdPartnerToUse = PaymentOnholdPartner(

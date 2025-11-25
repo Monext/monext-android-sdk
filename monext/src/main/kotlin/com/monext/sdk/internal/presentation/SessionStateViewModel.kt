@@ -141,7 +141,7 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         if (paymentAttempt.selectedPaymentMethod != null) {
             when (paymentAttempt.selectedPaymentMethod) {
                 is PaymentMethod.Cards -> makeCardPayment(paymentAttempt.paymentFormData, context, showOverlay)
-                else -> makePaymentMethodPayment(paymentAttempt.selectedPaymentMethod, paymentAttempt.paymentFormData, showOverlay)
+                else -> makePaymentMethodPayment(paymentAttempt.selectedPaymentMethod, paymentAttempt.paymentFormData, context, showOverlay)
             }
         } else if (paymentAttempt.selectedWallet != null) {
             makeWalletPayment(paymentAttempt.selectedWallet, paymentAttempt.walletFormData, showOverlay)
@@ -160,27 +160,13 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         val pmData = paymentMethod.data ?: return
 
         val cardType = formData.cardNetwork?.network ?: cardCode
-
-        val displayMetrics = context.resources.displayMetrics
-        val timeZone = TimeZone.getDefault()
-        val millisecondsOffset = timeZone.getOffset(Date().time)
-        val minutesOffset = TimeUnit.MILLISECONDS.toSeconds(millisecondsOffset.toLong()).toInt()
-
         val paymentParams = formData.paymentParams()
         paymentParams.sdkContextData = initializeAndGetThreeDSData(cardType)
 
         val params = SecuredPaymentRequest(
             cardCode = cardCode,
             contractNumber = pmData.contractNumber ?: "",
-            deviceInfo = DeviceInfo(
-                colorDepth = 32,
-                containerHeight = 498.467,
-                containerWidth = 750,
-                javaEnabled = false,
-                screenHeight = displayMetrics.heightPixels,
-                screenWidth = displayMetrics.widthPixels,
-                timeZoneOffset = minutesOffset
-            ),
+            deviceInfo = createDeviceInfo(context),
             isEmbeddedRedirectionAllowed = true,
             merchantReturnUrl = sessionStateRepository.returnURLString,
             paymentParams = paymentParams,
@@ -219,24 +205,45 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
     /**
      * Fonction qui permet de traiter les paiements (autre que Carte)
      */
-    private suspend fun makePaymentMethodPayment(selectedPaymentMethod: PaymentMethod?, paymentFormData: FormData?, showOverlay: (PaymentOverlayToggle) -> Unit) {
-
+    internal suspend fun makePaymentMethodPayment(
+        selectedPaymentMethod: PaymentMethod?,
+        paymentFormData: FormData?,
+        context: Context,
+        showOverlay: (PaymentOverlayToggle) -> Unit
+    ) {
         val paymentMethod = selectedPaymentMethod ?: return
         val formData = paymentFormData ?: return
         val cardCode = paymentMethod.cardCode ?: return
         val pmData = paymentMethod.data ?: return
 
-        val params = PaymentRequest(
-            cardCode = cardCode,
-            merchantReturnUrl = sessionStateRepository.returnURLString,
-            isEmbeddedRedirectionAllowed = true,
-            paymentParams = formData.paymentParams(),
-            contractNumber = pmData.contractNumber ?: ""
-        )
-
         showOverlay(PaymentOverlayToggle.on(cardCode))
-        sessionStateRepository.makePayment(params)
-        showOverlay(PaymentOverlayToggle.off())
+        try {
+            val securedParams = formData.securedPaymentParams()
+
+            if (!securedParams.isEmpty()) {
+                val params = SecuredPaymentRequest(
+                    cardCode = cardCode,
+                    merchantReturnUrl = sessionStateRepository.returnURLString,
+                    isEmbeddedRedirectionAllowed = true,
+                    paymentParams = formData.paymentParams(),
+                    deviceInfo = createDeviceInfo(context),
+                    contractNumber = pmData.contractNumber ?: "",
+                    securedPaymentParams = securedParams
+                )
+                sessionStateRepository.makeSecuredPayment(params)
+            } else {
+                val params = PaymentRequest(
+                    cardCode = cardCode,
+                    merchantReturnUrl = sessionStateRepository.returnURLString,
+                    isEmbeddedRedirectionAllowed = true,
+                    paymentParams = formData.paymentParams(),
+                    contractNumber = pmData.contractNumber ?: ""
+                )
+                sessionStateRepository.makePayment(params)
+            }
+        } finally {
+            showOverlay(PaymentOverlayToggle.off())
+        }
     }
 
     internal suspend fun makeWalletPayment(selectedWallet: Wallet?, walletFormData: FormData.Wallet?, showOverlay: (PaymentOverlayToggle) -> Unit) {
@@ -323,6 +330,21 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
         _loading.value = false
     }
 
-    // endregion
+    private fun createDeviceInfo(context: Context): DeviceInfo {
+        val displayMetrics = context.resources.displayMetrics
+        val timeZone = TimeZone.getDefault()
+        val millisecondsOffset = timeZone.getOffset(Date().time)
+        val minutesOffset = TimeUnit.MILLISECONDS.toSeconds(millisecondsOffset.toLong()).toInt()
+
+        return DeviceInfo(
+            colorDepth = 32,
+            containerHeight = 498.467,
+            containerWidth = 750,
+            javaEnabled = false,
+            screenHeight = displayMetrics.heightPixels,
+            screenWidth = displayMetrics.widthPixels,
+            timeZoneOffset = minutesOffset
+        )
+    }
 
 }

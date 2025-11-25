@@ -95,7 +95,34 @@ internal data class PaymentForm(
     val displayButton: Boolean? = null,
     val description: String? = null,
     val buttonText: String? = null,
+    val formFields: List<PaymentMethodFormField> = emptyList(),
     val formType: String? = null
+) : Parcelable
+
+@Parcelize
+@Serializable
+internal data class PaymentMethodFormField(
+    val value: String? = null,
+    val formFieldType: String? = null,
+    val formDisplayFieldType: String? = null,
+    val validationErrorMessage: String? = null,
+    val placeholder: String? = null,
+    val inputType: String? = null,
+    val fieldIcon: String? = null,
+    val key: String? = null,
+    val label: String? = null,
+    val required: Boolean? = null,
+    val requiredErrorMessage: String? = null,
+    val formInputFieldType: String? = null,
+    val secured: Boolean? = null,
+    val disabled: Boolean? = null,
+    val validation: PaymentMethodFieldValidation? = null
+) : Parcelable
+
+@Parcelize
+@Serializable
+internal data class PaymentMethodFieldValidation(
+    val pattern: String? = null,
 ) : Parcelable
 
 @Parcelize

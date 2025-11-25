@@ -41,6 +41,11 @@ internal object PaymentAPIPreviewSuccess: PaymentAPI {
         params: AuthenticationResponse
     ): SessionState = PreviewSamples.sessionStateSuccess
 
+    override suspend fun isDone(
+        sessionToken: String,
+        cardCode: String,
+        timestamp: Long
+    ) = true
 
     override fun updateContext(context: InternalSDKContext) {}
 }
