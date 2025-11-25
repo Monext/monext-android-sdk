@@ -153,7 +153,7 @@ internal fun FormFieldsSection(cards: PaymentMethod.Cards, onFormValidated: (For
             text = cardNum,
             onTextChanged = { cardNum = it },
             labelText = stringResource(R.string.payment_card_form_field_card),
-            Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             assistant = CreditCardAssistant,
             issuer = issuer,
             keyboardOptions = KeyboardOptions(
@@ -174,7 +174,7 @@ internal fun FormFieldsSection(cards: PaymentMethod.Cards, onFormValidated: (For
                         text = expDate,
                         onTextChanged = { expDate = it },
                         labelText = stringResource(R.string.payment_card_form_field_expiration),
-                        Modifier.weight(1f),
+                        modifier = Modifier.weight(1f),
                         assistant = ExpirationDateAssistant,
                         issuer = issuer,
                         keyboardOptions = KeyboardOptions(
@@ -191,7 +191,7 @@ internal fun FormFieldsSection(cards: PaymentMethod.Cards, onFormValidated: (For
                         text = cvvNum,
                         onTextChanged = { cvvNum = it },
                         labelText = stringResource(R.string.payment_card_form_field_cvv),
-                        Modifier.weight(1f).focusRequester(cvvFocus),
+                        modifier =  Modifier.weight(1f).focusRequester(cvvFocus),
                         assistant = CvvAssistant,
                         showsAccessory = true,
                         issuer = issuer,
@@ -211,7 +211,7 @@ internal fun FormFieldsSection(cards: PaymentMethod.Cards, onFormValidated: (For
                 text = holder,
                 onTextChanged = { holder = it },
                 labelText = stringResource(R.string.payment_card_form_field_holder),
-                Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 assistant = HolderAssistant,
                 issuer = issuer,
                 keyboardOptions = KeyboardOptions(

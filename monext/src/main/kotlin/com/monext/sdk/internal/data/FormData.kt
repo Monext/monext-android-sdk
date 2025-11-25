@@ -38,8 +38,22 @@ internal sealed interface FormData: Parcelable {
             SecuredPaymentParams(cvv = cvv)
     }
 
-    data class AlternativePaymentMethodForm(val saveCard: Boolean): FormData {
+    @Parcelize
+    data class AlternativePaymentMethodForm(
+        val saveCard: Boolean,
+        val params: Map<String, String?> = emptyMap(),
+        val securedParams: Map<String, String?> = emptyMap()
+    ) : FormData {
+
         override fun paymentParams(): PaymentParams =
-            PaymentParams(savePaymentData = saveCard)
+            PaymentParams(
+                savePaymentData = saveCard,
+                additionalParams = params.ifEmpty { null }
+            )
+
+        override fun securedPaymentParams(): SecuredPaymentParams =
+            SecuredPaymentParams(
+                additionalParams = securedParams.ifEmpty { null }
+            )
     }
 }

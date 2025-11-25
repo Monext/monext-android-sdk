@@ -99,7 +99,7 @@ internal fun WalletItem(
             FormTextField(
                 cvvText, { cvvText = it },
                 labelText = stringResource(R.string.payment_card_form_field_cvv),
-                Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 useOnSurfaceStyle = true,
                 assistant = CvvAssistant,
                 issuer = issuer,
