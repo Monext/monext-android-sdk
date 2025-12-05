@@ -15,7 +15,8 @@ enum class Theme {
         return when (this) {
             DEFAULT -> Appearance(
                 headerTitle = "Monext Demo",
-                headerImage = painterResource(R.drawable.logo_monext)
+                headerImage = painterResource(R.drawable.logo_monext),
+                backButtonText = "Back"
             )
             DARK -> sampleDarkTheme()
         }
