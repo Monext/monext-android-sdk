@@ -81,12 +81,13 @@ internal fun PaymentSuccessScreen(info: SessionInfo, successData: PaymentSuccess
         Box(
             Modifier.Companion.background(theme.surfaceColor)
                 .fillMaxWidth().padding(16.dp)
-                .testTag("back_button")
+                
         ) {
-            AppButtonSecondaryFilled(onExit) {
+            AppButtonSecondaryFilled(onClick = onExit) {
                 Text(
-                    stringResource(R.string.button_return_to_app_title),
-                    style = theme.baseTextStyle.bold().s18()
+                    theme.backButtonText?:stringResource(R.string.button_return_to_app_title),
+                    style = theme.baseTextStyle.bold().s18(),
+                    modifier = Modifier.testTag("back_button")
                 )
             }
         }

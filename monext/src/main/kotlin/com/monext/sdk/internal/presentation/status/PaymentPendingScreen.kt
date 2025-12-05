@@ -72,12 +72,12 @@ internal fun PaymentPendingScreen(paymentOnholdPartner: PaymentOnholdPartner, on
         Box(
             Modifier.Companion.background(theme.surfaceColor)
                 .fillMaxWidth().padding(16.dp)
-                .testTag("back_button")
         ) {
             AppButtonSecondaryFilled(onExit) {
                 Text(
-                    stringResource(R.string.button_return_to_app_title),
-                    style = theme.baseTextStyle.bold().s18()
+                    style = theme.baseTextStyle.bold().s18(),
+                    modifier = Modifier.testTag("back_button"),
+                    text = theme.backButtonText?:stringResource(R.string.button_return_to_app_title)
                 )
             }
         }

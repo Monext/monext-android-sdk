@@ -111,6 +111,8 @@ class Appearance(
     val onHeaderBackgroundColor: Color = Defaults.onHeaderBackgroundColor,
 
     // MARK: Result
+    val backButtonText: String? = null,
+
 
     /// The image shown to the user on the success screen when the transaction has succeeded
     val successImage: Painter? = null,
