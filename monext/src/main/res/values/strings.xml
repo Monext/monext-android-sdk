@@ -20,7 +20,7 @@
     <string name="payment_failure_title2">Please change your payment method.</string>
 
     <string name="button_pay_title">Pay %1$s</string>
-    <string name="button_return_to_app_title">Back to the app</string>
+    <string name="button_return_to_app_title">Back</string>
     <string name="button_retry_title">Retry</string>
 
     <string name="payment_card_form_field_card">Card number</string>

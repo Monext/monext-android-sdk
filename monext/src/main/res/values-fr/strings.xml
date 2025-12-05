@@ -10,7 +10,7 @@
     <string name="payment_failure_title1">Votre banque a rejeté le paiement de %1$s.</string>
     <string name="payment_failure_title2">Veuillez sélectionner un autre moyen de paiement.</string>
     <string name="button_pay_title">Payer %1$s</string>
-    <string name="button_return_to_app_title">Retour sur l\'application</string>
+    <string name="button_return_to_app_title">Retour</string>
     <string name="misc_payment_method_card">Carte</string>
     <string name="payment_card_form_field_card">Numéro de carte</string>
     <string name="payment_card_form_field_holder">Titulaire de la carte</string>

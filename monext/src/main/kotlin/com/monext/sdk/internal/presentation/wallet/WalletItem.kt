@@ -50,7 +50,6 @@ import com.monext.sdk.internal.presentation.common.PaymentMethodChip
 import com.monext.sdk.internal.preview.PreviewSamples
 import com.monext.sdk.internal.preview.PreviewWrapper
 import com.monext.sdk.internal.util.CvvAssistant
-import java.time.LocalDate
 import java.time.YearMonth
 
 @Composable

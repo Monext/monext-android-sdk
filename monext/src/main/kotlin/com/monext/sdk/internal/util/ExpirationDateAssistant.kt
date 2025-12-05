@@ -2,10 +2,7 @@ package com.monext.sdk.internal.util
 
 import androidx.compose.ui.text.input.OffsetMapping
 import com.monext.sdk.Appearance
-import java.time.LocalDate
 import java.time.YearMonth
-import java.time.temporal.TemporalField
-import java.util.Date
 import kotlin.math.floor
 import kotlin.math.max
 

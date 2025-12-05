@@ -3,6 +3,7 @@ package com.monext.sdk.presentation
 import android.os.StrictMode
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -42,31 +43,38 @@ class PaymentContainerTest {
     val composeTestRule = createAndroidComposeRule<FakeTestActivity>()
 
     val appearance = Appearance(
-        headerTitle = "Monext Demo"
+        headerTitle = "Monext Demo",
+        backButtonText = "Back my friend"
     )
 
     @Test
     fun withSuccessTicket() {
-        val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_SUCCESS, )
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, "success_title", "back_button")
+        val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_SUCCESS )
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, mapOf("success_title" to "Congratulations",
+                                                                                                                                                    "back_button" to appearance.backButtonText))
     }
 
     @Test
     fun withSuccessTicketAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_SUCCESS)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, "success_title", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_SUCCESS, mapOf("success_title" to null,
+                                                                                                                                                    "back_button" to null))
     }
 
     @Test
     fun withPendingTicket() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_ONHOLD_PARTNER)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "pending_description", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, mapOf("pending_header" to "Payment pending",
+            "pending_description" to "Your payment is pending. Please contact your merchant for further information.",
+            "back_button" to appearance.backButtonText))
     }
 
     @Test
     fun withPendingTicketAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_ONHOLD_PARTNER)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "pending_description", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, mapOf("pending_header" to null,
+            "pending_description" to null,
+            "back_button" to null))
     }
 
     @Test
@@ -82,7 +90,8 @@ class PaymentContainerTest {
         )
 
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_ONHOLD_PARTNER, paymentOnholdPartner = paymentOnholdPartnerToUse)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, mapOf("pending_header" to "Payment pending",
+            "back_button" to appearance.backButtonText))
     }
 
     @Test
@@ -98,49 +107,56 @@ class PaymentContainerTest {
         )
 
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_ONHOLD_PARTNER, paymentOnholdPartner = paymentOnholdPartnerToUse)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, "pending_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_PENDING, mapOf("pending_header" to null,
+            "back_button" to null))
     }
 
     @Test
     fun withFailureDisplay() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_FAILURE)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, "failure_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, mapOf("failure_header" to "We are sorry",
+            "back_button" to appearance.backButtonText))
     }
 
     @Test
     fun withFailureDisplayAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_FAILURE)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, "failure_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_FAILURE, mapOf("failure_header" to null,
+            "back_button" to null))
     }
 
     @Test
     fun withExpiredSessionDisplay() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.TOKEN_EXPIRED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, "expîred_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, mapOf("expîred_header" to "Your payment session has expired.",
+            "back_button" to appearance.backButtonText))
     }
 
     @Test
     fun withExpiredSessionAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.TOKEN_EXPIRED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, "expîred_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.TOKEN_EXPIRED, mapOf("expîred_header" to null,
+            "back_button" to null))
     }
 
     @Test
     fun withCancelSessionDisplay() {
         val sessionState : SessionState = buildSessionState(false, SessionStateType.PAYMENT_CANCELED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, "cancel_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, mapOf("cancel_header" to "Your payment has been canceled.",
+            "back_button" to appearance.backButtonText))
     }
 
     @Test
     fun withCancelSessionAndRedirect() {
         val sessionState : SessionState = buildSessionState(true, SessionStateType.PAYMENT_CANCELED)
-        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, "cancel_header", "back_button")
+        executeSessionStateTest(sessionState, PaymentResult.TransactionState.PAYMENT_CANCELED, mapOf("cancel_header" to null,
+            "back_button" to null))
     }
 
     private fun executeSessionStateTest(
         sessionState: SessionState,
         expectedTransactionState: PaymentResult.TransactionState,
-        vararg expectedTags: String
+        expectedTagsAndValue: Map<String,String?>
     ) {
         var paymentResult: PaymentResult? = null
         var showingChange = true
@@ -162,21 +178,24 @@ class PaymentContainerTest {
             }
         }
 
-        composeTestRule.waitUntil(timeoutMillis = 5000) {
+        composeTestRule.waitUntil {
             paymentResult is PaymentResult.PaymentCompleted
         }
         val paymentCompleted: PaymentResult.PaymentCompleted = paymentResult as PaymentResult.PaymentCompleted
         assertEquals(expectedTransactionState, paymentCompleted.finalState)
 
         if (sessionState.automaticRedirectAtSessionsEnd == true) {
-            for (tag in expectedTags) {
-                composeTestRule.onNodeWithTag(tag).assertDoesNotExist()
+            for (tag in expectedTagsAndValue) {
+                composeTestRule.onNodeWithTag(tag.key).assertDoesNotExist()
             }
             assertFalse(showingChange)
         } else {
-            for (tag in expectedTags) {
-                composeTestRule.onNodeWithTag(tag).assertExists()
-                composeTestRule.onNodeWithTag(tag).assertIsDisplayed()
+            for (tag in expectedTagsAndValue) {
+                composeTestRule.onNodeWithTag(tag.key, useUnmergedTree = true).assertExists()
+                composeTestRule.onNodeWithTag(tag.key, useUnmergedTree = true).assertIsDisplayed()
+                tag.value?.let {
+                    composeTestRule.onNodeWithTag(tag.key, useUnmergedTree = true).assertTextEquals(tag.value!!)
+                }
             }
             assertTrue(showingChange)
         }

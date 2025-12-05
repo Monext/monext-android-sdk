@@ -21,7 +21,8 @@ internal fun AppButtonSecondaryFilled(onClick: () -> Unit, title: @Composable ()
         Modifier.Companion.fillMaxWidth().height(48.dp),
         shape = RoundedCornerShape(theme.buttonRadius),
         color = theme.secondaryColor,
-        contentColor = theme.onSecondaryColor
+        contentColor = theme.onSecondaryColor,
+
     ) {
         Box(contentAlignment = Alignment.Companion.Center) {
             title()
