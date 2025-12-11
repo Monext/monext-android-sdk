@@ -22,9 +22,6 @@ android {
         versionName = getVersionName()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Définition du nom de l'apk
-        setProperty("archivesBaseName", "monext-android-sdk-app-demo")
     }
 
     // Signature de l'APK
