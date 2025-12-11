@@ -114,9 +114,9 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
 
     private suspend fun initializeGooglePay(sessionState: SessionState) {
 
-        val gPayEnv = when (sessionStateRepository.internalSDKContext) {
-            MnxtEnvironment.Sandbox -> WalletConstants.ENVIRONMENT_TEST
-            else -> WalletConstants.ENVIRONMENT_PRODUCTION
+        val gPayEnv = when (sessionStateRepository.internalSDKContext.environment) {
+            MnxtEnvironment.Production -> WalletConstants.ENVIRONMENT_PRODUCTION
+            else -> WalletConstants.ENVIRONMENT_TEST
         }
 
         val inputs = GooglePayRequestData(sessionState, gPayEnv)
