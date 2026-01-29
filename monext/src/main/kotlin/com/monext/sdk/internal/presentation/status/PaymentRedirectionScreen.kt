@@ -3,6 +3,7 @@ package com.monext.sdk.internal.presentation.status
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -70,24 +71,32 @@ internal fun redirectionWebClient(redirectUrl: String, onFoundRedirect: () -> Un
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
         if (url?.startsWith(redirectUrl) == true) {
+            view?.post {
+                view.visibility = View.GONE
+            }
+
             onFoundRedirect()
         }
     }
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-        return shouldOverrideUrlLoadingCompat(request?.url)
+        return shouldOverrideUrlLoadingCompat(request?.url, view)
     }
 
     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-        return shouldOverrideUrlLoadingCompat(url?.toUri())
+        return shouldOverrideUrlLoadingCompat(url?.toUri(), view)
     }
 
-    private fun shouldOverrideUrlLoadingCompat(url: Uri?): Boolean {
+    private fun shouldOverrideUrlLoadingCompat(url: Uri?, view: WebView?): Boolean {
         val isRedirectUrl = url?.toString()?.startsWith(redirectUrl) == true
         val token = url?.getQueryParameter("paylinetoken")
         val paymentEndpoint = url?.getQueryParameter("paymentEndpoint")
 
         return if (isRedirectUrl && token != null && paymentEndpoint == "1") {
+            view?.post {
+                view.visibility = View.GONE
+            }
+
             onFoundRedirect()
             true
         } else {

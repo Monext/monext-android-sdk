@@ -1,6 +1,5 @@
 package com.monext.sdk.presentation.status
 
-import android.os.Environment
 import android.os.StrictMode
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
