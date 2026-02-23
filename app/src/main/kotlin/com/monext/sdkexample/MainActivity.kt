@@ -7,9 +7,6 @@ import androidx.activity.enableEdgeToEdge
 
 
 class MainActivity: ComponentActivity() {
-
-    private val sessionKey = "SAVED_SESSION_TOKEN"
-
     lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,15 +15,9 @@ class MainActivity: ComponentActivity() {
 
         // Passer le contexte au SessionManager
         sessionManager = SessionManager(
-            context = this,
-            restoredToken = savedInstanceState?.getString(sessionKey)
+            context = this
         )
 
         setContent { AppContainer(sessionManager) }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString(sessionKey, sessionManager.sessionToken.value)
-        super.onSaveInstanceState(outState)
     }
 }
