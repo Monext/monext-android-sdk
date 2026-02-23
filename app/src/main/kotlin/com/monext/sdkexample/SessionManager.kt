@@ -21,18 +21,16 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 class SessionManager(
     private val context: Context,
-    restoredToken: String?,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
     companion object {
-        private val SESSION_TOKEN_KEY = stringPreferencesKey("session_token")
         private val ENVIRONMENT_KEY = stringPreferencesKey("environment")
         private val CUSTOM_HOSTNAME_KEY = stringPreferencesKey("custom_hostname")
         private val SELECTED_LANGUAGE_KEY = stringPreferencesKey("selected_language")
     }
 
-    private val _sessionToken = MutableStateFlow<String?>(restoredToken)
+    private val _sessionToken = MutableStateFlow<String?>(null)
     val sessionToken = _sessionToken.asStateFlow()
 
     // Flow pour l'environnement sauvegardé
@@ -57,14 +55,6 @@ class SessionManager(
     suspend fun setSessionToken(token: String?) {
         withContext(dispatcher) {
             _sessionToken.value = token
-            // Sauvegarder dans DataStore
-            context.dataStore.edit { preferences ->
-                if (token != null) {
-                    preferences[SESSION_TOKEN_KEY] = token
-                } else {
-                    preferences.remove(SESSION_TOKEN_KEY)
-                }
-            }
         }
     }
 

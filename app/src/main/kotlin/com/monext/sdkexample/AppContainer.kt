@@ -29,7 +29,6 @@ fun AppContainer(sessionManager: SessionManager) {
 fun AppPreview() {
     val context = LocalContext.current
     AppContainer(SessionManager(
-        context = context,
-        restoredToken = null
+        context = context
     ))
 }
