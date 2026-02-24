@@ -14,5 +14,12 @@ class InternalSDKContext(sdkContext: MnxtSDKContext) {
     val environment: MnxtEnvironment = sdkContext.environment
     val config: MnxtSDKConfiguration = sdkContext.config
     val appearance: Appearance = sdkContext.appearance
-    var logger: Logger = CustomLogger()
+    var isSendRemoteLogs: Boolean = false;
+    var logger: Logger = CustomLogger(environment = environment, isSendRemoteLogs = isSendRemoteLogs)
+
+    fun updateSendRemoteLogs(isSendRemoteLogs: Boolean) {
+        this.isSendRemoteLogs = isSendRemoteLogs;
+        // On recrée le logger
+        this.logger = CustomLogger(environment = environment, isSendRemoteLogs = isSendRemoteLogs)
+    }
 }

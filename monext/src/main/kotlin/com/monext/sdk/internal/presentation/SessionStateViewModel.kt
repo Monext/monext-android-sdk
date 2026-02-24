@@ -72,9 +72,8 @@ internal class SessionStateViewModel(val sessionStateRepository: SessionStateRep
 
                 val internalContext = this[INTERNAL_SDK_CONTEXT] as InternalSDKContext
                 val paymentAPI = PaymentAPIFactory.create(
-                    environment = internalContext.environment,
-                    language = this[LANGUAGE_KEY] as String,
-                    logger = internalContext.logger
+                    internalSDKContext = internalContext,
+                    language = this[LANGUAGE_KEY] as String
                 )
                 val repository = SessionStateRepository(
                     paymentAPI = paymentAPI,

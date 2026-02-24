@@ -45,8 +45,12 @@ internal class SessionStateRepository(
     }
 
     fun updateContext(context: InternalSDKContext) {
-        paymentAPI.updateContext(context)
+        // On conserve la configuration issue du premier appelle Api
+        val currentSendRemoteLogs = internalSDKContext.isSendRemoteLogs
         internalSDKContext = context
+        internalSDKContext.isSendRemoteLogs = currentSendRemoteLogs;
+
+        paymentAPI.updateContext(internalSDKContext)
     }
 
     suspend fun updateSessionState(token: String) {
