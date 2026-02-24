@@ -1,6 +1,6 @@
 package com.monext.sdk.internal.api
 
-import com.monext.sdk.internal.service.Logger
+import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -22,7 +22,7 @@ internal fun interface HttpClient {
  */
 class ProxyHttpClient (
     private val config: HttpClientConfig,
-    private val logger: Logger,
+    private val internalSDKContext: InternalSDKContext,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : HttpClient {
 
@@ -38,7 +38,7 @@ class ProxyHttpClient (
 
     private suspend fun executeRequest(request: HttpRequest): HttpResponse {
         return withContext(dispatcher) {
-            logger.d(TAG, "Trying to call : ${request.method} ${request.url}")
+            internalSDKContext.logger.d(TAG, "Trying to call : ${request.method} ${request.url}")
 
             val url = getURL(request)
             val connection = (url.openConnection() as HttpsURLConnection).apply {
@@ -61,7 +61,7 @@ class ProxyHttpClient (
             val statusCode = connection.responseCode
             val headers = connection.headerFields
 
-            logger.d(TAG, "Response code: $statusCode")
+            internalSDKContext.logger.d(TAG, "Response code: $statusCode")
 
             val responseBody = if (statusCode in HttpURLConnection.HTTP_OK..300) {
                 connection.inputStream.bufferedReader().use { it.readText() }
@@ -69,7 +69,7 @@ class ProxyHttpClient (
                 connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
             }
 
-            logger.d(TAG, "Response body: $responseBody")
+            internalSDKContext.logger.d(TAG, "Response body: $responseBody")
 
             HttpResponse(statusCode, headers, responseBody)
         }
@@ -85,7 +85,7 @@ class ProxyHttpClient (
                 return operation()
             } catch (e: Exception) {
                 lastException = e
-                logger.e(TAG, "Attempt ${attempt + 1} failed", e)
+                internalSDKContext.logger.e(TAG, "Attempt ${attempt + 1} failed", e)
 
                 if (attempt < config.retryCount - 1) {
                     delay(config.retryDelayMs)

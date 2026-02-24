@@ -23,10 +23,10 @@ import com.monext.sdk.MnxtEnvironment
 import com.monext.sdk.MnxtSDKContext
 import com.monext.sdk.internal.api.PaymentAPIFactory
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
-import com.monext.sdk.internal.threeds.ThreeDSManager
 import com.monext.sdk.internal.data.LocalSessionStateRepo
 import com.monext.sdk.internal.data.SessionStateRepository
 import com.monext.sdk.internal.ext.rgba
+import com.monext.sdk.internal.threeds.ThreeDSManager
 
 @Composable
 internal fun darkAppearance(): Appearance {
@@ -72,16 +72,16 @@ internal fun PreviewWrapper(modifier: Modifier = Modifier.background(Color.rgba(
 
     val sdkContext = MnxtSDKContext(
         environment = MnxtEnvironment.Sandbox,
-        appearance = darkAppearance(),
+        appearance = darkAppearance()
+    )
 
-        )
+    val internalSDKContext = InternalSDKContext(sdkContext = sdkContext)
 
     val paymentApi = PaymentAPIFactory.create(
-        sdkContext.environment,
+        internalSDKContext = internalSDKContext,
         sdkContext.config.language,
         isLocalInspectionMode = LocalInspectionMode.current
     )
-    val internalSDKContext = InternalSDKContext(sdkContext = sdkContext)
     val repository = SessionStateRepository(
         paymentApi,
         internalSDKContext,

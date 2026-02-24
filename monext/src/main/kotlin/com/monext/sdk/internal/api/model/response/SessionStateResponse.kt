@@ -27,6 +27,7 @@ internal data class SessionState(
     val creationDate: String? = null,
     val info: SessionInfo? = null,
     val isSandbox: Boolean?,
+    val isSendRemoteLogs: Boolean? = false,
     val language: String?,
     val pointOfSale: String?,
     val pointOfSaleAddress: PointOfSaleAddress? = null,

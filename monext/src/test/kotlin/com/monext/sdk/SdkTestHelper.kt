@@ -187,9 +187,13 @@ class SdkTestHelper {
         )
 
         internal fun createInternalSDKContext(): InternalSDKContext {
+            return createInternalSDKContext(MnxtEnvironment.Sandbox);
+        }
+
+        internal fun createInternalSDKContext(environment: MnxtEnvironment): InternalSDKContext {
             val customLogger = mockk<CustomLogger>( relaxed = true)
             val internalSDKContext = InternalSDKContext(
-                sdkContext = MnxtSDKContext(environment = MnxtEnvironment.Sandbox)
+                sdkContext = MnxtSDKContext(environment = environment)
             )
             internalSDKContext.logger = customLogger
 
