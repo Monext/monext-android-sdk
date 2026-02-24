@@ -1,5 +1,6 @@
 package com.monext.sdk.internal.threeds
 
+import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.service.Logger
 import com.monext.sdk.internal.threeds.model.ChallengeUseCaseCallback
 import com.monext.sdk.internal.threeds.model.SdkChallengeData
@@ -13,22 +14,22 @@ import com.netcetera.threeds.sdk.api.transaction.challenge.events.RuntimeErrorEv
  * Dans tous les cas, on délègue la gestion du résultat à Payline => on envoi toujours la requete de paiement.
  * C'est Payline, qui en fonction du statut fera une trs OK/KO.
  */
-internal class CustomChallengeStatusReceiver(val logger: Logger,
+internal class CustomChallengeStatusReceiver(val internalSDKContext: InternalSDKContext,
                                              val sdkChallengeData: SdkChallengeData,
                                              val useCaseCallback: ChallengeUseCaseCallback) : ChallengeStatusReceiver {
 
     override fun completed(p0: CompletionEvent?) {
-        logger.d("CustomChallengeStatusReceiver", "Challenge completed ! => ${p0.toString()}")
+        internalSDKContext.logger.d("CustomChallengeStatusReceiver", "Challenge completed ! => ${p0.toString()}")
         useCaseCallback.onChallengeCompletion(sdkChallengeData.toAuthenticationResponse(p0?.transactionStatus))
     }
 
     override fun cancelled() {
-        logger.d("CustomChallengeStatusReceiver", "Challenge cancelled !")
+        internalSDKContext.logger.d("CustomChallengeStatusReceiver", "Challenge cancelled !")
         useCaseCallback.onChallengeCompletion(sdkChallengeData.toAuthenticationResponse())
     }
 
     override fun timedout() {
-        logger.w("CustomChallengeStatusReceiver", "Challenge timedout !")
+        internalSDKContext.logger.w("CustomChallengeStatusReceiver", "Challenge timedout !")
         useCaseCallback.onChallengeCompletion(sdkChallengeData.toAuthenticationResponse())
     }
 
@@ -40,7 +41,7 @@ internal class CustomChallengeStatusReceiver(val logger: Logger,
                 "errorMessageType:${p0?.errorMessage?.errorMessageType} - " +
                 "messageVersion: ${p0?.errorMessage?.messageVersionNumber}"
 
-        logger.e("CustomChallengeStatusReceiver", headerMessage)
+        internalSDKContext.logger.e("CustomChallengeStatusReceiver", headerMessage)
         useCaseCallback.onChallengeCompletion(sdkChallengeData.toAuthenticationResponse())
     }
 
@@ -48,7 +49,7 @@ internal class CustomChallengeStatusReceiver(val logger: Logger,
 
         val headerMessage = "Challenge failed from RuntimeErrorEvent => errorCode: ${p0?.errorCode} - errorMessage:${p0?.errorMessage}"
 
-        logger.e("CustomChallengeStatusReceiver", headerMessage)
+        internalSDKContext.logger.e("CustomChallengeStatusReceiver", headerMessage)
         useCaseCallback.onChallengeCompletion(sdkChallengeData.toAuthenticationResponse())
     }
 }
