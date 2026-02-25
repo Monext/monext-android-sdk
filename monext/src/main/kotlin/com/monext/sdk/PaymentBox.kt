@@ -32,6 +32,7 @@ fun PaymentBox(
     val onClick: () -> Unit = {
         if (sessionToken != null) {
             showPaymentSheet = true
+            println("click");
         }
     }
 
