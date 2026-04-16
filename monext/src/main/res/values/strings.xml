@@ -16,8 +16,7 @@
     <string name="token_expired_message">Your payment session has expired.</string>
 
     <string name="payment_failure_header">We are sorry</string>
-    <string name="payment_failure_title1">Your bank refused the payment of %1$s.</string>
-    <string name="payment_failure_title2">Please change your payment method.</string>
+    <string name="payment_failure_title1">Your payment %1$s could not be processed.</string>
 
     <string name="button_pay_title">Pay %1$s</string>
     <string name="button_return_to_app_title">Back</string>
