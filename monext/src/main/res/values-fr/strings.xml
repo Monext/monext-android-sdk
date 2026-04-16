@@ -7,8 +7,7 @@
     <string name="validation_error_invalid_date_format">Format non valide</string>
     <string name="validation_error_invalid_cvv">CVV non valide</string>
     <string name="accepted_cards_title">Cartes acceptées</string>
-    <string name="payment_failure_title1">Votre banque a rejeté le paiement de %1$s.</string>
-    <string name="payment_failure_title2">Veuillez sélectionner un autre moyen de paiement.</string>
+    <string name="payment_failure_title1">Votre paiement %1$s n’a pu aboutir.</string>
     <string name="button_pay_title">Payer %1$s</string>
     <string name="button_return_to_app_title">Retour</string>
     <string name="misc_payment_method_card">Carte</string>

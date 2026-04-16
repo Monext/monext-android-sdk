@@ -58,10 +58,6 @@ internal fun PaymentFailureScreen(amount: String, onRetry: () -> Unit, onExit: (
                 style = foregroundStyle
             )
 
-            Text(
-                stringResource(R.string.payment_failure_title2),
-                style = foregroundStyle
-            )
         }
 
         Column(
