@@ -9,4 +9,4 @@ data class MnxtSDKConfiguration(
      * possible values: EN, FR
      */
     val language: String = "EN",
-    )
+)

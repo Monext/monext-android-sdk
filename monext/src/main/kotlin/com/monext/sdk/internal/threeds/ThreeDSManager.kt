@@ -27,6 +27,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.json.JSONException
 import java.util.Base64
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 
 internal class ThreeDSManager (val paymentApi: PaymentAPI,
@@ -48,7 +51,7 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
      * Focntion qui permet d'initialiser la configuration du SDK 3DS
      */
     internal suspend fun startInitialize(sessionToken: String, cardCode: String) {
-        try {
+
             val uiCustomization = ThreeDSUICustomization.createUICustomization(internalSDKContext)
 
             val configurationBuilder = threeDSBusiness.createConfigParameters()
@@ -62,44 +65,53 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
                 UiCustomization.UiCustomizationType.MONOCHROME to uiCustomization
             )
 
-            threeDS2Service = getThreeDS2ServiceInstance()
-            threeDS2Service!!.initialize(
-                context,
-                configParameters,
-                locale,
-                uiCustomizationMap,
-                object : ThreeDS2Service.InitializationCallback {
-                    override fun onCompleted() {
-                        isInitialized = true
-                        loadWarnings()
-                        internalSDKContext.logger.d(TAG, "3DSService initialized !")
-                        // On affiche la conf du SDK 3DS en mode sandbox
-                        if(internalSDKContext.environment.isSandbox()) {
-                            displaySdkInfo()
+        // SuspendCoroutine pour récupérer les Calback de manière synchrone
+        return suspendCoroutine { continuation ->
+            try {
+                threeDS2Service = getThreeDS2ServiceInstance()
+                threeDS2Service!!.initialize(
+                    context,
+                    configParameters,
+                    locale,
+                    uiCustomizationMap,
+                    object : ThreeDS2Service.InitializationCallback {
+                        override fun onCompleted() {
+                            isInitialized = true
+                            loadWarnings()
+                            internalSDKContext.logger.d(TAG, "3DSService initialized !")
+                            // On affiche la conf du SDK 3DS en mode sandbox
+                            if (internalSDKContext.environment.isSandbox()) {
+                                displaySdkInfo()
+                            }
+                            // On reprend la coroutine avec succès
+                            continuation.resume(Unit)
                         }
-                    }
 
-                    override fun onError(throwable: Throwable) {
-                        internalSDKContext.logger.e(
-                            TAG,
-                            "3DSService initialized ERROR",
-                            throwable
-                        )
-                        throw ThreeDsException(
-                            ThreeDsExceptionType.INITIALISATION_FAILED,
-                            "Unable to initialize 3DS SDK scheme for card code: $cardCode"
-                        )
-                    }
-                })
-        } catch (e: Exception) {
-            // TODO : Gérer les erreurs
-            internalSDKContext.logger.e(
-                TAG,
-                "Error when initializing : ${e.message}",
-                e
-            )
+                        override fun onError(throwable: Throwable) {
+                            internalSDKContext.logger.e(
+                                TAG,
+                                "3DSService initialized ERROR",
+                                throwable
+                            )
+
+                            continuation.resumeWithException(
+                                ThreeDsException(
+                                    ThreeDsExceptionType.INITIALISATION_FAILED,
+                                    "Unable to initialize 3DS SDK for $cardCode",
+                                    throwable
+                                )
+                            )
+                        }
+                    })
+            } catch (e: Exception) {
+                internalSDKContext.logger.e(
+                    TAG,
+                    "Error when initializing : ${e.message}",
+                    e
+                )
+                continuation.resumeWithException(e)
+            }
         }
-
     }
 
     internal fun getThreeDS2ServiceInstance(): ThreeDS2Service {
@@ -154,7 +166,7 @@ internal class ThreeDSManager (val paymentApi: PaymentAPI,
             val challengeParameters : ChallengeParameters = sdkChallengeData.toSdkChallengeParameters()
             val challengeStatusReceiver : ChallengeStatusReceiver =
                 CustomChallengeStatusReceiver(
-                    logger = internalSDKContext.logger,
+                    internalSDKContext = internalSDKContext,
                     sdkChallengeData = sdkChallengeData,
                     useCaseCallback = useCaseCallback)
 

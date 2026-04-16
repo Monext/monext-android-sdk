@@ -1,7 +1,6 @@
 package com.monext.sdk.internal.api
 
 import com.monext.sdk.BuildConfig.VERSION_NAME
-import com.monext.sdk.MnxtEnvironment
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.request.PaymentRequest
 import com.monext.sdk.internal.api.model.request.SecuredPaymentRequest
@@ -9,9 +8,9 @@ import com.monext.sdk.internal.api.model.request.WalletPaymentRequest
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.data.CardNetwork
 import com.monext.sdk.internal.exception.NetworkError
-import com.monext.sdk.internal.service.Logger
 import com.monext.sdk.internal.threeds.model.AuthenticationResponse
 import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKeyResponse
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -49,10 +48,11 @@ internal interface PaymentAPI {
 }
 
 internal class PaymentAPIImpl(
-    private var environment: MnxtEnvironment,
+    private var internalSDKContext: InternalSDKContext,
     private var language: String,
-    private var logger: Logger,
-    private val httpClient: HttpClient,
+    private var httpClient: HttpClient,
+    private val httpConfig: HttpClientConfig,
+    private val dispatcher: CoroutineDispatcher,
 ): PaymentAPI {
 
     companion object {
@@ -69,9 +69,9 @@ internal class PaymentAPIImpl(
     }
 
     override fun updateContext(context: InternalSDKContext) {
-        environment = context.environment
+        internalSDKContext = context
         language = context.config.language
-        logger = context.logger
+        httpClient = ProxyHttpClient(httpConfig, internalSDKContext, dispatcher);
     }
 
     /**
@@ -79,10 +79,15 @@ internal class PaymentAPIImpl(
      */
     @Throws(NetworkError::class)
     override suspend fun stateCurrent(sessionToken: String): SessionState {
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "state", "current")
         val httpRequest = buildHttpRequest(url, HttpMethod.GET)
-        return makeRequest(httpRequest)
+        val sessionStateResponse = makeRequest<SessionState>(httpRequest)
+
+        // on récupère la configuration pour le remoteLogger
+        internalSDKContext.updateSendRemoteLogs(sessionStateResponse.isSendRemoteLogs == true)
+
+        return sessionStateResponse
     }
 
     /**
@@ -92,7 +97,7 @@ internal class PaymentAPIImpl(
     @Throws(NetworkError::class)
     override suspend fun payment(sessionToken: String, params: PaymentRequest): SessionState {
         logParameters(params)
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "paymentRequest")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
         return makeRequest(httpRequest)
@@ -105,7 +110,7 @@ internal class PaymentAPIImpl(
     @Throws(NetworkError::class)
     override suspend fun securedPayment(sessionToken: String, params: SecuredPaymentRequest): SessionState {
         logParameters(params)
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "securedPaymentRequest")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
         return makeRequest(httpRequest)
@@ -118,7 +123,7 @@ internal class PaymentAPIImpl(
     @Throws(NetworkError::class)
     override suspend fun walletPayment(sessionToken: String, params: WalletPaymentRequest): SessionState {
         logParameters(params)
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "walletPaymentRequest")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
         return makeRequest(httpRequest)
@@ -131,7 +136,7 @@ internal class PaymentAPIImpl(
     @Throws(NetworkError::class)
     override suspend fun availableCardNetworks(sessionToken: String, params: AvailableCardNetworksRequest): AvailableCardNetworksResponse {
         logParameters(params)
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "availablecardnetworks")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
         return makeRequest(httpRequest)
@@ -143,7 +148,7 @@ internal class PaymentAPIImpl(
     @OptIn(ExperimentalSerializationApi::class)
     @Throws(NetworkError::class)
     override suspend fun fetchDirectoryServerSdkKeys(sessionToken: String): DirectoryServerSdkKeyResponse {
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "directoryServerSdkKeys")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.GET)
         return makeRequest(httpRequest)
@@ -155,7 +160,7 @@ internal class PaymentAPIImpl(
     @OptIn(ExperimentalSerializationApi::class)
     @Throws(NetworkError::class)
     override suspend fun sdkPaymentRequest(sessionToken: String, params: AuthenticationResponse): SessionState {
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "SdkPaymentRequest")
         val httpRequest = buildHttpRequest(url, method = HttpMethod.POST, body = json.encodeToString(params))
         return makeRequest(httpRequest)
@@ -167,7 +172,7 @@ internal class PaymentAPIImpl(
     @OptIn(ExperimentalSerializationApi::class)
     @Throws(NetworkError::class)
     override suspend fun isDone(sessionToken: String, cardCode: String, timestamp: Long): Boolean {
-        val baseUrl = buildBaseUrl(environment)
+        val baseUrl = buildBaseUrl()
 
         // build path-only URL (no query)
         val urlNoQuery = appendPath(baseUrl, sessionToken, "cardCode", cardCode, "activewaiting", "isDone")
@@ -207,7 +212,7 @@ internal class PaymentAPIImpl(
             "Content-Type" to "application/json",
             "Accept" to "application/json",
             "Accept-Language" to language,
-            "Origin" to environment.host,
+            "Origin" to internalSDKContext.environment.host,
             "X-Widget-SDK" to "Android $VERSION_NAME"
         )
     }
@@ -225,7 +230,7 @@ internal class PaymentAPIImpl(
     @Throws(NetworkError::class)
     private inline fun <reified R> handleResponse(response: HttpResponse): R {
         if (response.statusCode !in 200..299) {
-            logger.e(TAG, "HTTP Error: ${response.statusCode}")
+            internalSDKContext.logger.e(TAG, "HTTP Error: ${response.statusCode}")
 
             when (response.statusCode) {
                 HttpURLConnection.HTTP_BAD_REQUEST -> throw NetworkError.BadRequest()
@@ -242,14 +247,14 @@ internal class PaymentAPIImpl(
         return try {
             json.decodeFromString<R>(response.body)
         } catch (e: Exception) {
-            logger.e(TAG, "JSON parsing error", e)
+            internalSDKContext.logger.e(TAG, "JSON parsing error", e)
             throw NetworkError.ParseError(e)
         }
     }
 
-    private fun buildBaseUrl(environment: MnxtEnvironment): String {
+    private fun buildBaseUrl(): String {
         val defaultScheme = "https"
-
+        val environment = internalSDKContext.environment;
         var cleanPath = ""
         if (environment.path.isNotEmpty()) {
             cleanPath = if (environment.path.startsWith("/")) environment.path else "/$environment.path"
@@ -291,7 +296,7 @@ internal class PaymentAPIImpl(
     }
 
     private fun logParameters(params: Any) {
-        logger.d(TAG, params.toString())
+        internalSDKContext.logger.d(TAG, params.toString())
     }
 
     // endregion

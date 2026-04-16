@@ -1,9 +1,9 @@
 package com.monext.sdk.internal.api
 
-import com.monext.sdk.BuildConfig.VERSION_CODE
 import com.monext.sdk.BuildConfig.VERSION_NAME
 import com.monext.sdk.MnxtEnvironment
 import com.monext.sdk.SdkTestHelper
+import com.monext.sdk.SdkTestHelper.Companion.createInternalSDKContext
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
 import com.monext.sdk.internal.service.CustomLogger
@@ -11,11 +11,9 @@ import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkAll
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
@@ -25,8 +23,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.Ignore
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-import kotlin.test.expect
 
 // Response String JSON du WIDGET
 private const val RESPONSE_CONTEXT_SUCCESS =
@@ -57,9 +53,8 @@ class PaymentAPIImplTest {
 
         paymentApi = spyk(
             PaymentAPIFactory.create(
-                environment = testEnvironment,
+                internalSDKContext = createInternalSDKContext(testEnvironment),
                 language = "en",
-                logger = mockkLogger,
                 httpClient = mockHttpClient
             )
         )
@@ -95,9 +90,8 @@ class PaymentAPIImplTest {
         // Given
         paymentApi = spyk(
             PaymentAPIFactory.create(
-                environment = MnxtEnvironment.Sandbox,
+                internalSDKContext = createInternalSDKContext(MnxtEnvironment.Sandbox),
                 language = "en",
-                logger = mockkLogger,
                 httpClient = mockHttpClient
             )
         )
@@ -124,9 +118,8 @@ class PaymentAPIImplTest {
         // Given
         paymentApi = spyk(
             PaymentAPIFactory.create(
-                environment = MnxtEnvironment.Production,
+                internalSDKContext = createInternalSDKContext(MnxtEnvironment.Production),
                 language = "en",
-                logger = mockkLogger,
                 httpClient = mockHttpClient
             )
         )
