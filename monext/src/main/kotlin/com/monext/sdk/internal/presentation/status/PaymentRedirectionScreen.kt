@@ -1,6 +1,9 @@
 package com.monext.sdk.internal.presentation.status
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.view.View
@@ -40,8 +43,9 @@ internal fun PaymentRedirectionScreen(data: RedirectionData, onComplete: () -> U
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                     settings.javaScriptEnabled = true
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = true
                     webViewClient = redirectionWebClient(redirectionUrl, onComplete)
-                    // NOTE: Fix for nested scrolling not working, disables sheet dismissal inside webview
                     setOnTouchListener { v, event ->
                         v.parent?.requestDisallowInterceptTouchEvent(true)
                         v.onTouchEvent(event)
@@ -57,24 +61,19 @@ internal fun PaymentRedirectionScreen(data: RedirectionData, onComplete: () -> U
                             webView.loadUrl(targetUrl)
                         }
                     }
-                    else -> {
-                        webView.loadUrl(targetUrl)
-                    }
+                    else -> webView.loadUrl(targetUrl)
                 }
             }
         )
     }
 }
 
-internal fun redirectionWebClient(redirectUrl: String, onFoundRedirect: () -> Unit) = object: WebViewClient() {
+internal fun redirectionWebClient(redirectUrl: String, onFoundRedirect: () -> Unit) = object : WebViewClient() {
 
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
         if (url?.startsWith(redirectUrl) == true) {
-            view?.post {
-                view.visibility = View.GONE
-            }
-
+            view?.post { view.visibility = View.GONE }
             onFoundRedirect()
         }
     }
@@ -88,19 +87,69 @@ internal fun redirectionWebClient(redirectUrl: String, onFoundRedirect: () -> Un
     }
 
     private fun shouldOverrideUrlLoadingCompat(url: Uri?, view: WebView?): Boolean {
-        val isRedirectUrl = url?.toString()?.startsWith(redirectUrl) == true
-        val token = url?.getQueryParameter("paylinetoken")
-        val paymentEndpoint = url?.getQueryParameter("paymentEndpoint")
+        if (url == null) return false
+        val context = view?.context ?: return false
 
-        return if (isRedirectUrl && token != null && paymentEndpoint == "1") {
-            view?.post {
-                view.visibility = View.GONE
-            }
-
+        if (isPaylineCallback(url, redirectUrl)) {
+            view.post { view.visibility = View.GONE }
             onFoundRedirect()
-            true
-        } else {
-            false
+            return true
         }
+
+        if (isExternalScheme(url.scheme)) {
+            return handleDeeplink(context, url)
+        }
+
+        return false
+    }
+}
+
+private fun isPaylineCallback(url: Uri, redirectUrl: String): Boolean {
+    return url.toString().startsWith(redirectUrl)
+            && url.getQueryParameter("paylinetoken") != null
+            && url.getQueryParameter("paymentEndpoint") == "1"
+}
+
+private fun isExternalScheme(scheme: String?): Boolean {
+    return scheme != null && scheme != "http" && scheme != "https"
+}
+
+private fun handleDeeplink(context: Context, uri: Uri): Boolean {
+    return when (uri.scheme?.lowercase()) {
+        "intent" -> handleIntentScheme(context, uri)
+        else -> launchExternalApp(context, uri)
+    }
+}
+
+private fun handleIntentScheme(context: Context, uri: Uri): Boolean {
+    val intent = runCatching {
+        Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
+            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+    }.getOrElse { return false }
+
+    return runCatching { context.startActivity(intent); true }
+        .getOrElse { intent.`package`?.let { openPlayStore(context, it) } ?: false }
+}
+
+private fun launchExternalApp(context: Context, uri: Uri): Boolean {
+    return try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, uri).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        )
+        true
+    } catch (e: ActivityNotFoundException) {
+        true
+    }
+}
+
+private fun openPlayStore(context: Context, packageName: String): Boolean {
+    return try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, "market://details?id=$packageName".toUri())
+                .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        )
+        true
+    } catch (e: ActivityNotFoundException) {
+        false
     }
 }
