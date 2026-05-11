@@ -316,7 +316,7 @@ jobs:
           prerelease: false
           tag_name: ${{ steps.version.outputs.VERSION_NAME }}
           name: Monext Online Android SDK Release v${{ steps.version.outputs.VERSION_NAME }}
-          #  Permet de mettre à jour une release existante si elle existe déjà
+          #  Permet de mettre à jour une release existante si elle existe déjà.
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
