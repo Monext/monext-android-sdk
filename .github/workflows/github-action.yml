@@ -306,15 +306,15 @@ jobs:
 
       # Publication sur GitHub Packages
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             monext/build/outputs/aar/*.aar
             CHANGELOG.md
           generate_release_notes: true
-          draft: false # TODO : A voir quand Maven central sera ok
+          draft: false
           prerelease: false
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.VERSION_NAME }}
           name: Monext Online Android SDK Release v${{ steps.version.outputs.VERSION_NAME }}
           #  Permet de mettre à jour une release existante si elle existe déjà
           fail_on_unmatched_files: false
