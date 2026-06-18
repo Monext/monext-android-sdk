@@ -13,7 +13,7 @@ import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKey
 import com.monext.sdk.internal.threeds.response.DirectoryServerSdkKeyResponse
 
 internal object PaymentAPIPreviewSuccess: PaymentAPI {
-    override suspend fun stateCurrent(sessionToken: String): SessionState = PreviewSamples.sessionStatePaymentMethodsList
+    override suspend fun stateCurrent(sessionToken: String, merchantReturnUrl: String): SessionState = PreviewSamples.sessionStatePaymentMethodsList
     override suspend fun payment(sessionToken: String, params: PaymentRequest): SessionState = PreviewSamples.sessionStateSuccess
     override suspend fun securedPayment(sessionToken: String, params: SecuredPaymentRequest): SessionState = PreviewSamples.sessionStateSuccess
     override suspend fun walletPayment(sessionToken: String, params: WalletPaymentRequest): SessionState = PreviewSamples.sessionStateSuccess

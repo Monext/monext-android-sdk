@@ -7,14 +7,12 @@ import com.monext.sdk.MnxtSDKContext
 import com.monext.sdk.SdkTestHelper
 import com.monext.sdk.internal.api.PaymentAPI
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
-import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.preview.PreviewSamples
 import com.monext.sdk.internal.preview.PreviewSamples.Companion.sessionStateActiveWaiting
 import com.monext.sdk.internal.threeds.ThreeDSManager
 import com.monext.sdk.internal.threeds.model.ChallengeUseCaseCallback
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
@@ -52,7 +50,7 @@ class SessionStateRepositoryTest {
         underTest = spyk(SessionStateRepository(paymentAPI, internalSDKContext, threeDSManager))
 
         // Mock
-        coEvery { paymentAPI.stateCurrent(any()) } returns sessionStateMethodList
+        coEvery { paymentAPI.stateCurrent(any(), any()) } returns sessionStateMethodList
     }
 
     @Test
@@ -60,7 +58,7 @@ class SessionStateRepositoryTest {
 
         underTest.updateSessionState(token)
 
-        coVerify(exactly = 1) { paymentAPI.stateCurrent(token)  }
+        coVerify(exactly = 1) { paymentAPI.stateCurrent(token, any())  }
         assertEquals(sessionStateMethodList, underTest.sessionState.value)
     }
 
@@ -86,7 +84,7 @@ class SessionStateRepositoryTest {
     fun clearSession() = runTest(testDispatcher) {
         // Init data
         underTest.updateSessionState(token)
-        coVerify(exactly = 1) { paymentAPI.stateCurrent(token)  }
+        coVerify(exactly = 1) { paymentAPI.stateCurrent(token, any())  }
         assertEquals(sessionStateMethodList, underTest.sessionState.value)
 
         // Test
@@ -180,7 +178,7 @@ class SessionStateRepositoryTest {
         // On met à jour
         underTest.updateSessionState(token)
 
-        coVerify(exactly = 1) { paymentAPI.stateCurrent(token)  }
+        coVerify(exactly = 1) { paymentAPI.stateCurrent(token, any())  }
         // Il ne doit plus etre null
         assertEquals(sessionStateMethodList, underTest.sessionState.value)
     }

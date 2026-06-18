@@ -96,8 +96,8 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                     )
                 )
                 if (!sheetState.isVisible) {
-                onIsShowingChange?.invoke(false)
-            }
+                    onIsShowingChange?.invoke(false)
+                }
             },
             modifier = Modifier.statusBarsPadding().testTag("payment_bottom_sheet"),
             sheetState = sheetState,
@@ -120,9 +120,6 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
             LaunchedEffect(Unit) {
                 viewModel.initializeSessionState(sessionToken)
             }
-
-            // On démarre "ForegroundService" afin d'éviter à l'OS de kill l'app en background si jamais il y a changement d'application
-            PaymentForegroundService.start(context)
 
             val sessionLoading by viewModel.sessionLoading.collectAsStateWithLifecycle()
             val canPayGooglePay by viewModel.canPayGooglePay.collectAsStateWithLifecycle()
@@ -195,6 +192,9 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                                 )
                             },
                             onRedirectionComplete = { viewModel.updateSessionState(sessionToken) },
+                            onMakePayment = { attempt ->
+                                viewModel.makePayment(attempt, context) { showingOverlay = it }
+                            },
                             onRetry = { /* TODO: implement RETRY */ },
                             onResult = onResult,
                             onIsShowingChange = isShowingChangeWrapper,

@@ -3,7 +3,6 @@ package com.monext.sdk.internal.preview
 import com.monext.sdk.MnxtEnvironment
 import com.monext.sdk.MnxtSDKContext
 import com.monext.sdk.SdkTestHelper
-import com.monext.sdk.internal.api.AvailableCardNetworksRequest
 import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
@@ -28,7 +27,7 @@ class PaymentAPIPreviewSuccessTest {
 
     @Test
     fun stateCurrent() = runBlocking {
-        assertEquals(PreviewSamples.sessionStatePaymentMethodsList, underTest.stateCurrent("aa"))
+        assertEquals(PreviewSamples.sessionStatePaymentMethodsList, underTest.stateCurrent("aa", "https://www.monext.fr"))
     }
 
     @Test

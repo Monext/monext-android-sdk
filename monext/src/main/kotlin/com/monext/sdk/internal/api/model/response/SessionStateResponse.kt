@@ -46,6 +46,7 @@ internal enum class SessionStateType {
 
     PAYMENT_METHODS_LIST,
     PAYMENT_REDIRECT_NO_RESPONSE,
+    PAYMENT_REDIRECT_WITH_JAVASCRIPT,
     PAYMENT_SUCCESS,
     PAYMENT_FAILURE,
     PAYMENT_ONHOLD_PARTNER,
@@ -59,7 +60,7 @@ internal enum class SessionStateType {
 
     fun toTransactionState(): PaymentResult.TransactionState? =
         when (this) {
-            PAYMENT_METHODS_LIST, PAYMENT_REDIRECT_NO_RESPONSE, SDK_CHALLENGE, ACTIVE_WAITING -> PaymentResult.TransactionState.PAYMENT_INCOMPLETE
+            PAYMENT_METHODS_LIST, PAYMENT_REDIRECT_NO_RESPONSE, PAYMENT_REDIRECT_WITH_JAVASCRIPT, SDK_CHALLENGE, ACTIVE_WAITING -> PaymentResult.TransactionState.PAYMENT_INCOMPLETE
             PAYMENT_SUCCESS -> PaymentResult.TransactionState.PAYMENT_SUCCESS
             PAYMENT_FAILURE, PAYMENT_FAILURE_WITH_RETRY -> PaymentResult.TransactionState.PAYMENT_FAILURE
             PAYMENT_CANCELED -> PaymentResult.TransactionState.PAYMENT_CANCELED
