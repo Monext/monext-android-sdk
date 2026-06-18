@@ -55,7 +55,7 @@ internal class SessionStateRepository(
 
     suspend fun updateSessionState(token: String) {
         makeRequest {
-            val sState = paymentAPI.stateCurrent(token)
+            val sState = paymentAPI.stateCurrent(sessionToken = token, merchantReturnUrl = this.returnURLString)
             this.token = sState.token
             sState
         }
