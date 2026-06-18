@@ -96,8 +96,31 @@ internal data class PaymentForm(
     val description: String? = null,
     val buttonText: String? = null,
     val formFields: List<PaymentMethodFormField> = emptyList(),
+    val formScript: FormScript? = null,
     val formType: String? = null
 ) : Parcelable
+
+@Parcelize
+@Serializable
+internal data class FormScript(
+    val content: String? = null,
+    val wrapIntoScriptTag: Boolean? = null,
+    val formScriptEnum: String? = null
+) : Parcelable {
+
+    /**
+     * Retourne le contenu HTML prêt à être chargé dans la WebView.
+     * Si [wrapIntoScriptTag] vaut true, le contenu est entouré d'une balise <script></script>.
+     */
+    fun htmlContent(): String? {
+        val script = content ?: return null
+        return if (wrapIntoScriptTag == true) {
+            "<script>$script</script>"
+        } else {
+            script
+        }
+    }
+}
 
 @Parcelize
 @Serializable
