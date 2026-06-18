@@ -121,6 +121,9 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
                 viewModel.initializeSessionState(sessionToken)
             }
 
+            // On démarre "ForegroundService" afin d'éviter à l'OS de kill l'app en background si jamais il y a changement d'application
+            PaymentForegroundService.start(context)
+
             val sessionLoading by viewModel.sessionLoading.collectAsStateWithLifecycle()
             val canPayGooglePay by viewModel.canPayGooglePay.collectAsStateWithLifecycle()
             var showingOverlay by remember { mutableStateOf(PaymentOverlayToggle.off()) }

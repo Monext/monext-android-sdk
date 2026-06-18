@@ -1,6 +1,7 @@
 package com.monext.sdk.internal.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import com.monext.sdk.PaymentOverlayToggle
 import com.monext.sdk.PaymentResult
 import com.monext.sdk.PaymentResult.PaymentCompleted
@@ -20,6 +21,7 @@ import com.monext.sdk.internal.presentation.status.PaymentPendingScreen
 import com.monext.sdk.internal.presentation.status.PaymentRedirectionScreen
 import com.monext.sdk.internal.presentation.status.PaymentSuccessScreen
 import com.monext.sdk.internal.presentation.status.TokenExpiredScreen
+import com.monext.sdk.internal.service.PaymentForegroundService
 import com.monext.sdk.internal.threeds.view.PaymentSdkChallengeScreen
 
 internal data class PaymentAttempt(
@@ -44,7 +46,10 @@ internal fun PaymentContainer(
     showOverlay: (PaymentOverlayToggle) -> Unit
 ) {
 
+    val context = LocalContext.current
+
     if (sessionState?.type?.isFinalState() == true) {
+        PaymentForegroundService.stop(context)
         when(sessionState.type) {
             SessionStateType.PAYMENT_SUCCESS -> onResult(
                 PaymentCompleted(
