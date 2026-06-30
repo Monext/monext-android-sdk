@@ -1,6 +1,7 @@
 package com.monext.sdk
 
 import android.os.StrictMode
+import android.view.WindowManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -103,5 +105,71 @@ class PaymentSheetTest {
         }
 
         assertFalse(showPaymentSheet)
+    }
+
+    @Test
+    fun paymentSheet_whenShowing_appliesSecureFlagOnActivity() {
+        val testContext = MnxtSDKContext(MnxtEnvironment.Sandbox)
+
+        composeTestRule.activity.setTestComposable {
+            PaymentSheet(
+                isShowing = true,
+                sessionToken = "test-token",
+                sdkContext = testContext,
+                onResult = {}
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        val flags = composeTestRule.activity.window.attributes.flags
+        assertTrue(
+            "FLAG_SECURE devrait être actif sur l'Activity",
+            flags and WindowManager.LayoutParams.FLAG_SECURE != 0
+        )
+    }
+
+    @Test
+    fun paymentSheet_whenNotShowing_doesNotApplySecureFlag() {
+        val testContext = MnxtSDKContext(MnxtEnvironment.Sandbox)
+
+        composeTestRule.activity.setTestComposable {
+            PaymentSheet(
+                isShowing = false,
+                sessionToken = "test-token",
+                sdkContext = testContext,
+                onResult = {}
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        val flags = composeTestRule.activity.window.attributes.flags
+        assertTrue(
+            "FLAG_SECURE ne devrait pas être actif quand le sheet n'est pas affiché",
+            flags and WindowManager.LayoutParams.FLAG_SECURE == 0
+        )
+    }
+
+    @Test
+    fun paymentSheet_inNonSecureEnvironment_doesNotApplySecureFlag() {
+        val testContext = MnxtSDKContext(MnxtEnvironment.Custom("webpayment.dev.payline.com/payline-widget")) // environnement non-sécurisé
+
+        composeTestRule.activity.setTestComposable {
+            PaymentSheet(
+                isShowing = true,
+                sessionToken = "test-token",
+                sdkContext = testContext,
+                onResult = {}
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        val flags = composeTestRule.activity.window.attributes.flags
+        assertTrue(
+            "FLAG_SECURE ne devrait pas être actif en environnement non-sécurisé",
+            flags and WindowManager.LayoutParams.FLAG_SECURE == 0
+        )
     }
 }
