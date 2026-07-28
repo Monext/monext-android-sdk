@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <application>
+        <service
+            android:name=".internal.service.PaymentForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!--
+          ContentProvider auto-init de RootDetector.
+
+          Fusionné automatiquement dans le manifest de l'app intégratrice.
+          L'authority utilise ${applicationId} pour garantir l'unicité
+          entre plusieurs apps qui intègrent le SDK.
+
+          android:exported="false" → jamais accessible depuis l'extérieur.
+          android:multiprocess="false" → instancié une seule fois dans le process principal.
+      -->
+        <provider
+            android:name="com.monext.sdk.internal.security.RootDetectorInitializer"
+            android:authorities="${applicationId}.monext.security.init"
+            android:exported="false"
+            android:multiprocess="false" />
+    </application>
 </manifest>

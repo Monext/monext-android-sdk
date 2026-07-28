@@ -7,24 +7,15 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.monext.sdk.Appearance
-import com.monext.sdk.FakeTestActivity
-import com.monext.sdk.LocalAppearance
-import com.monext.sdk.PaymentOverlayToggle
-import com.monext.sdk.PaymentResult
+import com.monext.sdk.*
 import com.monext.sdk.internal.api.model.response.SessionState
 import com.monext.sdk.internal.api.model.response.SessionStateType
-import com.monext.sdk.internal.data.LocalSessionStateRepo
-import com.monext.sdk.internal.data.SessionStateRepository
-import com.monext.sdk.internal.data.sessionstate.ActiveWaiting
-import com.monext.sdk.internal.data.sessionstate.CustomMessage
-import com.monext.sdk.internal.data.sessionstate.PaymentOnholdPartner
+import com.monext.sdk.internal.data.FormData
+import com.monext.sdk.internal.data.sessionstate.*
+import com.monext.sdk.internal.presentation.PaymentAttempt
 import com.monext.sdk.internal.presentation.PaymentContainer
 import com.monext.sdk.internal.preview.PreviewSamples.Companion.buildSessionState
-import io.mockk.impl.annotations.RelaxedMockK
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -157,6 +148,78 @@ class PaymentContainerTest {
             "back_button" to null))
     }
 
+    @Test
+    fun withPaymentRedirectWithJavascript_triggersMakePaymentForLoadedMethod() {
+        // Given une réponse PAYMENT_REDIRECT_WITH_JAVASCRIPT contenant un moyen de paiement
+        // avec un script à exécuter (ex : empreinte device PayPal).
+        val paymentMethodData = PaymentMethodData(
+            cardCode = "PAYPAL_APIREST",
+            contractNumber = "PAYPAL_APIREST",
+            disabled = false,
+            hasForm = true,
+            form = PaymentForm(
+                displayButton = true,
+                formScript = FormScript(
+                    content = "console.log('fingerprint');",
+                    wrapIntoScriptTag = true,
+                    formScriptEnum = "CUSTOM"
+                ),
+                formType = "CUSTOM"
+            ),
+            hasLogo = false,
+            logo = null,
+            isIsolated = false,
+            options = emptyList(),
+            paymentMethodAction = 0,
+            additionalData = null,
+            requestContext = null,
+            shouldBeInTopPosition = false,
+            state = "AVAILABLE"
+        )
+        val sessionState = SessionState(
+            token = "fake_token",
+            type = SessionStateType.PAYMENT_REDIRECT_WITH_JAVASCRIPT,
+            creationDate = "Tue Mar 25 12:33:22 CET 2025",
+            cancelUrl = "https://www.payline.com",
+            pointOfSale = "POS_Fake",
+            language = "fr",
+            returnUrl = "https://www.monext.fr",
+            automaticRedirectAtSessionsEnd = false,
+            isSandbox = true,
+            paymentMethodsList = PaymentMethodsList(
+                isOriginalCreditTransfer = false,
+                needsDeviceFingerprint = true,
+                paymentMethodsData = listOf(paymentMethodData),
+                scoringNeeded = null,
+                sensitiveInputContentMasked = false,
+                shouldChangePaymentMethodPosition = false,
+                wallets = emptyList()
+            )
+        )
+
+        var capturedAttempt: PaymentAttempt? = null
+
+        // When
+        composeTestRule.activity.setTestComposable {
+            CompositionLocalProvider(LocalAppearance provides appearance) {
+                PaymentContainer(
+                    sessionState,
+                    { paymentMethodList, sessionInfo -> },
+                    {},
+                    { attempt -> capturedAttempt = attempt },
+                    {},
+                    { },
+                    { }
+                ) { state -> stateHistory.add(state) }
+            }
+        }
+
+        // Then : le paiement est déclenché automatiquement pour le moyen de paiement chargé
+        composeTestRule.waitUntil(timeoutMillis = 10_000) { capturedAttempt != null }
+        assertEquals("PAYPAL_APIREST", capturedAttempt?.selectedPaymentMethod?.cardCode)
+        assertTrue(capturedAttempt?.paymentFormData is FormData.AlternativePaymentMethodForm)
+    }
+
     private fun executeSessionStateTest(
         sessionState: SessionState,
         expectedTransactionState: PaymentResult.TransactionState,
@@ -170,6 +233,7 @@ class PaymentContainerTest {
                 PaymentContainer(
                     sessionState,
                     { paymentMethodList, sessionInfo -> },
+                    {},
                     {},
                     {},
                     { result ->

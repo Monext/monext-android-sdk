@@ -9,5 +9,5 @@ internal data class ActiveWaiting(
     val cardCode: String,
     val contractNumber: String,
     val walletCardIndex: Int,
-    val merchantReturnUrl: String
+    val merchantReturnUrl: String?
 )

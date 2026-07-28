@@ -62,12 +62,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-
     kotlin {
-        jvmToolchain(21)
+        jvmToolchain(17)
     }
 
     buildFeatures {
@@ -133,7 +132,14 @@ android {
     }
 }
 
-// Fonction pour récupérer la clé API de manière sécurisée
+// Force la résolution d'espresso-core en 3.7.0 même si une lib transitive
+// tente de le tirer en 3.6.x (incompatible avec Android 15+).
+configurations.all {
+    resolutionStrategy {
+        force("androidx.test.espresso:espresso-core:3.7.0")
+    }
+}
+
 fun getApiKey(): String {
     // 1. Variable d'environnement (CI/CD)
     System.getenv("THREEDS_API_ACCESS_KEY")?.let {
@@ -469,18 +475,22 @@ dependencies {
     // Voir la documentation : https://3dss.netcetera.com/3dssdk/doc/2.25.0/android-integration
     implementation(files("libs/netcetera-3ds-sdk-2.5.3.2-classes.jar"))
 
-    //  Tests
+    // Tests JVM
     testImplementation(libs.junit.jupiter)
     testImplementation(kotlin("test"))
     testImplementation(libs.io.mockk)
     testImplementation(libs.jetbrains.kotlinx.test)
     testImplementation(libs.slf4j.api)
 
-    debugImplementation(libs.ui.tooling)
+    // Tooling Compose (Preview en debug)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 
+    // Tests instrumentés
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.ui.test.junit4.android)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.io.mockk)
     androidTestImplementation(libs.io.mockk.agent)
     androidTestImplementation(libs.io.mockk.android)

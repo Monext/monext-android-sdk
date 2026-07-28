@@ -1,6 +1,7 @@
 package com.monext.sdk.internal.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import com.monext.sdk.PaymentOverlayToggle
 import com.monext.sdk.PaymentResult
 import com.monext.sdk.PaymentResult.PaymentCompleted
@@ -17,9 +18,11 @@ import com.monext.sdk.internal.presentation.status.LoadingSection
 import com.monext.sdk.internal.presentation.status.PaymentCanceledScreen
 import com.monext.sdk.internal.presentation.status.PaymentFailureScreen
 import com.monext.sdk.internal.presentation.status.PaymentPendingScreen
+import com.monext.sdk.internal.presentation.status.PaymentJavascriptRedirectionScreen
 import com.monext.sdk.internal.presentation.status.PaymentRedirectionScreen
 import com.monext.sdk.internal.presentation.status.PaymentSuccessScreen
 import com.monext.sdk.internal.presentation.status.TokenExpiredScreen
+import com.monext.sdk.internal.service.PaymentForegroundService
 import com.monext.sdk.internal.threeds.view.PaymentSdkChallengeScreen
 
 internal data class PaymentAttempt(
@@ -38,13 +41,17 @@ internal fun PaymentContainer(
     sessionState: SessionState?,
     paymentMethodsScreen: @Composable (PaymentMethodsList, SessionInfo) -> Unit,
     onRedirectionComplete: () -> Unit,
+    onMakePayment: (PaymentAttempt) -> Unit,
     onRetry: () -> Unit,
     onResult: (PaymentResult) -> Unit,
     onIsShowingChange: ((Boolean) -> Unit)? = null,
     showOverlay: (PaymentOverlayToggle) -> Unit
 ) {
 
+    val context = LocalContext.current
+
     if (sessionState?.type?.isFinalState() == true) {
+        PaymentForegroundService.stop(context)
         when(sessionState.type) {
             SessionStateType.PAYMENT_SUCCESS -> onResult(
                 PaymentCompleted(
@@ -90,6 +97,30 @@ internal fun PaymentContainer(
                     onRedirectionComplete()
                 }
             } ?: LoadingSection()
+        }
+
+        SessionStateType.PAYMENT_REDIRECT_WITH_JAVASCRIPT -> {
+            // On a les memes data que "paymentMethodsList".
+            // On exécute le Javascript dans une WebView invisible (seul un spinner est affiché),
+            // puis on déclenche automatiquement le paiement du moyen de paiement chargé,
+            // sans afficher le bouton ni demander d'interaction à l'acheteur.
+            val paymentMethod = sessionState.paymentMethodsList?.paymentMethods?.firstOrNull()
+            val formScript = paymentMethod?.data?.form?.formScript
+            if (paymentMethod != null && formScript != null) {
+                PaymentJavascriptRedirectionScreen(formScript) {
+                    onMakePayment(
+                        PaymentAttempt(
+                            selectedPaymentMethod = paymentMethod,
+                            paymentFormData = FormData.AlternativePaymentMethodForm(saveCard = false),
+                            selectedWallet = null,
+                            walletFormData = null
+                        )
+                    )
+                }
+            } else {
+                // Ne peut normalement pas arriver car si le backend renvoit ce type de réponse, c'est qu'il a controlé les données.
+                LoadingSection()
+            }
         }
 
         SessionStateType.SDK_CHALLENGE -> {

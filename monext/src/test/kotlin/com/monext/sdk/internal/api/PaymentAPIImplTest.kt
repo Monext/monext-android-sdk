@@ -38,6 +38,7 @@ class PaymentAPIImplTest {
     private val testDispatcher = StandardTestDispatcher()
     private val testEnvironment = MnxtEnvironment.Custom("test.example.com/api/v1")
     private val sessionToken = "test-session-token-123"
+    private val merchantReturnUrl = "https://www.monext.fr"
 
     // allow to capture parameter with non nullable type `Double`
     val captureHttpRequest = slot<HttpRequest>()
@@ -73,14 +74,14 @@ class PaymentAPIImplTest {
         mockHttpClientResponse(responseBody = RESPONSE_CONTEXT_SUCCESS)
 
         // When
-        val result = paymentApi.stateCurrent(sessionToken)
+        val result = paymentApi.stateCurrent(sessionToken, merchantReturnUrl)
 
         // Then
         checkResponseSuccess(expectedSessionState, result)
 
         // On check aussi la request envoyée
         checkHttpRequest(
-            url = "https://test.example.com/api/v1/services/token/test-session-token-123/state/current",
+            url = "https://test.example.com/api/v1/services/token/test-session-token-123/state/current?merchantReturnUrl=$merchantReturnUrl",
             method = "GET"
         )
     }
@@ -100,14 +101,14 @@ class PaymentAPIImplTest {
         mockHttpClientResponse(responseBody = RESPONSE_CONTEXT_SUCCESS)
 
         // When
-        val result = paymentApi.stateCurrent(sessionToken)
+        val result = paymentApi.stateCurrent(sessionToken, merchantReturnUrl)
 
         // Then
         checkResponseSuccess(expectedSessionState, result)
 
         // On check aussi la request envoyée
         checkHttpRequest(
-            url = "https://homologation-payment.payline.com/services/token/test-session-token-123/state/current",
+            url = "https://homologation-payment.payline.com/services/token/test-session-token-123/state/current?merchantReturnUrl=$merchantReturnUrl",
             method = "GET",
             origin = "homologation-payment.payline.com"
         )
@@ -128,14 +129,14 @@ class PaymentAPIImplTest {
         mockHttpClientResponse(responseBody = RESPONSE_CONTEXT_SUCCESS)
 
         // When
-        val result = paymentApi.stateCurrent(sessionToken)
+        val result = paymentApi.stateCurrent(sessionToken, merchantReturnUrl)
 
         // Then
         checkResponseSuccess(expectedSessionState, result)
 
         // On check aussi la request envoyée
         checkHttpRequest(
-            url = "https://payment.payline.com/services/token/test-session-token-123/state/current",
+            url = "https://payment.payline.com/services/token/test-session-token-123/state/current?merchantReturnUrl=$merchantReturnUrl",
             method = "GET",
             origin = "payment.payline.com"
         )

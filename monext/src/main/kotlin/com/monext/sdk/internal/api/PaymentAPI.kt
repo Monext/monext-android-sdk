@@ -21,7 +21,7 @@ import java.net.URL
 internal interface PaymentAPI {
 
     @Throws(NetworkError::class)
-    suspend fun stateCurrent(sessionToken: String): SessionState
+    suspend fun stateCurrent(sessionToken: String, merchantReturnUrl: String): SessionState
 
     @Throws(NetworkError::class)
     suspend fun payment(sessionToken: String, params: PaymentRequest): SessionState
@@ -78,10 +78,20 @@ internal class PaymentAPIImpl(
      * GET /token/{token}/state/current
      */
     @Throws(NetworkError::class)
-    override suspend fun stateCurrent(sessionToken: String): SessionState {
+    override suspend fun stateCurrent(sessionToken: String, merchantReturnUrl: String): SessionState {
         val baseUrl = buildBaseUrl()
         val url = appendPath(baseUrl, sessionToken, "state", "current")
-        val httpRequest = buildHttpRequest(url, HttpMethod.GET)
+
+        val uriWithQuery = URI(
+            url.protocol,
+            url.authority,
+            url.path,
+            "merchantReturnUrl=$merchantReturnUrl",
+            null
+        )
+        val finalUrl = uriWithQuery.toURL()
+
+        val httpRequest = buildHttpRequest(finalUrl, HttpMethod.GET)
         val sessionStateResponse = makeRequest<SessionState>(httpRequest)
 
         // on récupère la configuration pour le remoteLogger
