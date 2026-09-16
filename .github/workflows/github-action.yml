@@ -48,7 +48,7 @@ jobs:
 
       # Installe le SDK Android nécessaire pour compiler
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: ./.github/actions/setup-android-sdk
         with:
           cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
           packages: 'platform-tools'
@@ -216,7 +216,7 @@ jobs:
           cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: ./.github/actions/setup-android-sdk
         with:
           cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
 
@@ -348,7 +348,7 @@ jobs:
           cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: ./.github/actions/setup-android-sdk
         with:
           cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
 
