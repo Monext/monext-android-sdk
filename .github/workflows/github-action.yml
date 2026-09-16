@@ -51,6 +51,7 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: ${{ env.ANDROID_SDK_TOOLS }}
+          packages: 'platform-tools'
 
       # Rend le wrapper Gradle exécutable (nécessaire sur Linux)
       - name: Grant execute permission for gradlew
