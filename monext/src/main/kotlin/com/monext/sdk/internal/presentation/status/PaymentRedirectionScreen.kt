@@ -9,6 +9,7 @@ import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,9 @@ internal fun PaymentRedirectionScreen(data: RedirectionData, onComplete: () -> U
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+                    settings.domStorageEnabled = true // Corrige l'erreur setItem, permet l'ajout dans le localStorage et le sessionStorage
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW // Autorise uniquement le même http que l'appel (https)
+
                     settings.javaScriptEnabled = true
                     settings.useWideViewPort = true
                     settings.loadWithOverviewMode = true
