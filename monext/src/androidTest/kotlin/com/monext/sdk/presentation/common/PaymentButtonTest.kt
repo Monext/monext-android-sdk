@@ -17,6 +17,7 @@ import com.monext.sdk.LocalAppearance
 import com.monext.sdk.SdkTestHelper.Companion.createPaymentMethodData
 import com.monext.sdk.internal.data.PaymentMethod
 import com.monext.sdk.internal.data.sessionstate.PaymentForm
+import com.monext.sdk.internal.data.sessionstate.PaymentMethodButton
 import com.monext.sdk.internal.presentation.common.PaymentButton
 import org.junit.Before
 import org.junit.Rule
@@ -80,7 +81,7 @@ class PaymentButtonTest {
     fun paymentButton_with_selectedPaymentMethod_enabled_noLoader() {
         val paymentForm = PaymentForm(
             displayButton = true,
-            buttonText = "Continue with Paypal"
+            button = PaymentMethodButton(buttonText = "Continue with Paypal")
         )
         val paymentMethodData = createPaymentMethodData("PAYPAL", true, paymentForm)
         val paymentMethod = PaymentMethod.AlternativePaymentMethod(paymentMethodData)
@@ -100,7 +101,7 @@ class PaymentButtonTest {
     fun paymentButton_with_selectedPaymentMethod_disabled_noLoader() {
         val paymentForm = PaymentForm(
             displayButton = true,
-            buttonText = "Continue with Paypal"
+            button = PaymentMethodButton(buttonText = "Continue with Paypal")
         )
         val paymentMethodData = createPaymentMethodData("PAYPAL", true, paymentForm)
         val paymentMethod = PaymentMethod.AlternativePaymentMethod(paymentMethodData)

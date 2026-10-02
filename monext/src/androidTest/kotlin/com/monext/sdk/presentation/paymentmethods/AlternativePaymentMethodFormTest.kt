@@ -15,6 +15,7 @@ import com.monext.sdk.SdkTestHelper. Companion.createPaymentMethodData
 import com.monext.sdk.internal.data.FormData
 import com.monext. sdk.internal.data.PaymentMethod
 import com.monext. sdk.internal.data.sessionstate.PaymentForm
+import com.monext.sdk.internal.data.sessionstate.PaymentMethodButton
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodFieldValidation
 import com.monext. sdk.internal.data.sessionstate.PaymentMethodFormField
 import com.monext.sdk.internal.presentation.paymentmethods.AlternativePaymentMethodForm
@@ -84,7 +85,7 @@ class AlternativePaymentMethodFormTest {
         return PaymentForm(
             displayButton = true,
             description = FORM_DESCRIPTION,
-            buttonText = BUTTON_TEXT,
+            button = PaymentMethodButton(buttonText = BUTTON_TEXT),
             formType = FORM_TYPE,
             formFields = listOf(createPhoneNumberField(value, label))
         )
