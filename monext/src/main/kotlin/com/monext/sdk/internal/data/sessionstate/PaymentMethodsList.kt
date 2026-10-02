@@ -94,10 +94,19 @@ internal data class PaymentMethodData(
 internal data class PaymentForm(
     val displayButton: Boolean? = null,
     val description: String? = null,
-    val buttonText: String? = null,
+    val button: PaymentMethodButton? = null,
     val formFields: List<PaymentMethodFormField> = emptyList(),
     val formScript: FormScript? = null,
     val formType: String? = null
+) : Parcelable
+
+@Parcelize
+@Serializable
+internal data class PaymentMethodButton(
+    val buttonText: String? = null,
+    val buttonType: String? = null,
+    val key: String? = null,
+    val title: String? = null
 ) : Parcelable
 
 @Parcelize

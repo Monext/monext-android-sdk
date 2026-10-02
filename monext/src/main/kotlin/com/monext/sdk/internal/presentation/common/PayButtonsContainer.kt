@@ -75,7 +75,7 @@ internal fun PayButtonsContainer(
 internal fun PaymentButton(amount: String, selectedPaymentMethod: PaymentMethod?, canPay: Boolean, isLoading: Boolean, onClick: () -> Unit) {
 
     val theme = LocalAppearance.current
-    val text = selectedPaymentMethod?.data?.form?.buttonText
+    val text = selectedPaymentMethod?.data?.form?.button?.buttonText
         ?: stringResource(R.string.button_pay_title, amount)
 
     Surface(
