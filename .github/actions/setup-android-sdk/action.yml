@@ -1,0 +1,18 @@
+name: 'Setup Android SDK'
+description: 'Configure le SDK Android via android-actions/setup-android, sans installer le package "tools" obsolète'
+inputs:
+  cmdline-tools-version:
+    description: 'Version des cmdline-tools à installer'
+    required: true
+  packages:
+    description: 'Packages SDK à installer, séparés par des espaces'
+    required: false
+    default: 'platform-tools'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: ${{ inputs.cmdline-tools-version }}
+        packages: ${{ inputs.packages }}

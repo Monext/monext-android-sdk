@@ -1,4 +1,3 @@
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -84,7 +83,10 @@ android {
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 fun getVersionName(): String = (project.extra["getVersionName"] as () -> String)()
+
+@Suppress("UNCHECKED_CAST")
 fun getVersionCode(): Int = (project.extra["getVersionCode"] as () -> Int)()
 
 dependencies {
@@ -114,7 +116,6 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.ui.test.junit4.android)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)

@@ -5,15 +5,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.monext.sdk.LocalAppearance
+import com.monext.sdk.R
 import com.monext.sdk.internal.data.LocalSessionStateRepo
 import com.monext.sdk.internal.data.sessionstate.ActiveWaiting
+import com.monext.sdk.internal.ext.bold
+import com.monext.sdk.internal.ext.foreground
+import com.monext.sdk.internal.ext.s24
 import com.monext.sdk.internal.presentation.common.HtmlWebView
 
 @Composable
@@ -36,6 +42,13 @@ internal fun ActiveWaitingScreen(activeWaiting: ActiveWaiting) {
                     .padding(16.dp)
                     .testTag("active_waiting_loader"),
                 color = LocalAppearance.current.onHeaderBackgroundColor
+            )
+
+            Text(
+                stringResource(R.string.active_waiting_title),
+                style = theme.baseTextStyle.bold().s24()
+                    .foreground(theme.onBackgroundColor),
+                modifier = Modifier.testTag("active_waiting_header")
             )
 
             if (!activeWaiting.message?.localizedMessage.isNullOrBlank()) {

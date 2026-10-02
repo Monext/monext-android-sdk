@@ -11,6 +11,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.monext.sdk.internal.security.RootDetector
+import com.monext.sdk.internal.security.ui.SecurityAlertDialog
 
 /**
  * This composable handles payment sheet presentation upon user interaction.
@@ -28,10 +30,15 @@ fun PaymentBox(
 ) {
 
     var showPaymentSheet by rememberSaveable { mutableStateOf(false) }
+    var showSecurityAlert by rememberSaveable { mutableStateOf(false) }
 
     val onClick: () -> Unit = {
         if (sessionToken != null) {
-            showPaymentSheet = true
+            if (RootDetector.isCompromised()) {
+                showSecurityAlert = true
+            } else {
+                showPaymentSheet = true
+            }
         }
     }
 
@@ -44,6 +51,13 @@ fun PaymentBox(
             sdkContext = sdkContext,
             onResult = onResult,
             onIsShowingChange = { showPaymentSheet = it })
+
+
+        if (showSecurityAlert) {
+            SecurityAlertDialog(
+                onDismiss = { showSecurityAlert = false }
+            )
+        }
     }
 }
 

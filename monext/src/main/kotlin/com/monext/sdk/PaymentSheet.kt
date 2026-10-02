@@ -1,7 +1,9 @@
 package com.monext.sdk
 
 import android.app.Application
+import android.os.Environment
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,9 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.MutableCreationExtras
@@ -41,12 +46,14 @@ import com.monext.sdk.internal.api.configuration.InternalSDKContext
 import com.monext.sdk.internal.api.model.SessionInfo
 import com.monext.sdk.internal.data.LocalSessionStateRepo
 import com.monext.sdk.internal.data.sessionstate.PaymentMethodsList
+import com.monext.sdk.internal.ext.findActivity
 import com.monext.sdk.internal.presentation.PaymentContainer
 import com.monext.sdk.internal.presentation.SessionStateViewModel
 import com.monext.sdk.internal.presentation.common.HeaderSection
 import com.monext.sdk.internal.presentation.common.PaymentMethodsScreen
 import com.monext.sdk.internal.presentation.common.PaymentOverlay
 import com.monext.sdk.internal.preview.PreviewWrapper
+import com.monext.sdk.internal.util.SecureWindowManager
 import kotlinx.coroutines.launch
 
 /**
@@ -62,6 +69,21 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
         val context = LocalContext.current
+
+        val isSecureEnvironment = sdkContext.environment in listOf(MnxtEnvironment.Sandbox, MnxtEnvironment.Production)
+
+        // Protège la fenêtre de l'Activity hôte (pour le recents/app switcher)
+        DisposableEffect(Unit) {
+            val activity = context.findActivity()
+            if (isSecureEnvironment) {
+                activity?.let { SecureWindowManager.acquire(it) }
+            }
+            onDispose {
+                if (isSecureEnvironment) {
+                    activity?.let { SecureWindowManager.release(it) }
+                }
+            }
+        }
 
         val viewModel: SessionStateViewModel = viewModel(
             factory = SessionStateViewModel.Factory,
@@ -112,6 +134,22 @@ fun PaymentSheet(isShowing: Boolean, sessionToken: String, sdkContext: MnxtSDKCo
             containerColor = sdkContext.appearance.backgroundColor,
             dragHandle = {}
         ) {
+            val sheetView = LocalView.current
+            DisposableEffect(Unit) {
+                val window = (sheetView.parent as? DialogWindowProvider)?.window
+                if (isSecureEnvironment) {
+                    window?.setFlags(
+                        WindowManager.LayoutParams.FLAG_SECURE,
+                        WindowManager.LayoutParams.FLAG_SECURE
+                    )
+                }
+                onDispose {
+                    if (isSecureEnvironment) {
+                        window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    }
+                }
+            }
+
 
             LaunchedEffect(sdkContext) {
                 viewModel.updateContext(InternalSDKContext(sdkContext))
