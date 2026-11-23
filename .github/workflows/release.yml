@@ -1,0 +1,288 @@
+# =============================================================================
+# Bouton « Release » : livre le SDK depuis develop
+# -----------------------------------------------------------------------------
+#
+# UTILISATION
+#   Actions > « Release SDK » > Run workflow, branche develop.
+#   Le formulaire propose deux champs, vides par défaut :
+#     - version à livrer sur main      vide = version de gradle.properties sans -SNAPSHOT
+#                                      (ex. 1.0.10-SNAPSHOT -> 1.0.10)
+#     - version suivante sur develop   vide = dernier chiffre + 1 (ex. 1.0.11-SNAPSHOT)
+#   et une case « à blanc » qui vérifie et calcule tout sans rien pousser.
+#
+#   GitHub ne sait pas préremplir le formulaire avec une valeur lue dans un
+#   fichier : d'où les champs vides = calcul automatique. Les versions retenues
+#   sont affichées dans le résumé du run AVANT la validation.
+#
+# DÉROULEMENT
+#   1. job « Vérifications » (sans droit d'écriture) :
+#        - lancé depuis develop uniquement ;
+#        - par un admin du dépôt uniquement ;
+#        - le DERNIER pipeline CI de develop porte sur la tête de develop et est
+#          VERT ;
+#        - calcul et contrôle des versions, livraison simulée à blanc ;
+#        - résumé du run : versions proposées.
+#   2. job « Livraison » (environment `release`) : attend qu'un admin clique sur
+#      « Review deployments > Approve and deploy ». C'est la popup de
+#      confirmation. Il exécute ensuite .github/scripts/release.sh :
+#        - commit « Release X » sur la tête de develop -> poussé sur main ;
+#        - commit « Préparation Y-SNAPSHOT » par-dessus -> poussé sur develop ;
+#        - UN push atomique en avance rapide, jamais forcé.
+#   3. Le push sur main déclenche le pipeline CI (github-action.yml), qui publie
+#      sur Maven Central, crée la GitHub Release et pose le tag vX sur le commit
+#      livré.
+#
+# DROITS : POURQUOI UNE CLÉ DE DÉPLOIEMENT
+#   Sur GitHub, le GITHUB_TOKEN n'a PAS les droits de la personne qui clique :
+#   il agit au nom de github-actions[bot]. Or les règles de branches (rulesets
+#   main-1, develop-1, Master_develop_restriction) imposent une PR, et ce bot ne
+#   peut pas les contourner. De plus, un push fait avec le GITHUB_TOKEN ne
+#   déclenche aucun workflow : la publication ne partirait pas.
+#   Le job de livraison pousse donc avec une clé SSH de déploiement, qui peut
+#   être exemptée des règles et dont les pushes déclenchent les workflows.
+#   (Alternative plus propre si un admin de l'organisation est disponible : une
+#   GitHub App avec Contents + Workflows en écriture.)
+#
+# MISE EN PLACE (une fois, par un admin du DÉPÔT — déjà faite le 2026-11-23)
+#   1. Générer une paire de clés sans passphrase :
+#        ssh-keygen -t ed25519 -N "" -C "monext-android-sdk-release" -f monext-release-key
+#   2. Settings > Deploy keys > Add deploy key : titre `release-bot`, contenu de
+#      monext-release-key.pub, cocher « Allow write access ».
+#   3. Settings > Rules > Rulesets > main-1, develop-1, Master_develop_restriction :
+#      Bypass list > Add bypass > « Deploy keys » (Always allow).
+#      ⚠ Cette exception vaut pour TOUTES les clés de déploiement du dépôt :
+#      cette clé doit rester la seule clé en écriture.
+#   4. Settings > Environments > `release` :
+#        - Required reviewers : les admins ;
+#        - Deployment branches : Selected branches > develop ;
+#        - Secret RELEASE_DEPLOY_KEY : contenu de la clé PRIVÉE monext-release-key.
+#   5. Supprimer la clé privée du poste.
+#   La clé n'expire pas : la remplacer régulièrement (refaire 1, 2 et 4, puis
+#   supprimer l'ancienne de Deploy keys), et immédiatement en cas de fuite.
+#
+# SÉCURITÉ
+#   Les champs du formulaire ne sont jamais interpolés par ${{ }} dans un
+#   script : ils passent par des variables d'environnement et le script les
+#   valide par expression régulière.
+# =============================================================================
+name: Release SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Version à livrer sur main (vide = version de gradle.properties sans -SNAPSHOT, ex. 1.0.10)"
+        type: string
+        required: false
+        default: ""
+      next_version:
+        description: "Version suivante sur develop (vide = dernier chiffre + 1, ex. 1.0.11-SNAPSHOT)"
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: "À blanc : tout vérifier et calculer, sans rien pousser"
+        type: boolean
+        default: false
+
+# Lecture seule par défaut ; l'écriture passe par la clé de déploiement.
+permissions:
+  contents: read
+
+# Une seule livraison à la fois, jamais annulée en cours de route.
+concurrency:
+  group: release-sdk
+  cancel-in-progress: false
+
+env:
+  MAIN_BRANCH: main
+  DEV_BRANCH: develop
+  CI_WORKFLOW_FILE: github-action.yml
+
+jobs:
+  # ============================================
+  # 1. VÉRIFICATIONS ET CALCUL DES VERSIONS
+  # ============================================
+  plan:
+    name: Vérifications et versions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read  # Lecture du statut du dernier pipeline de develop
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
+      release_version: ${{ steps.versions.outputs.release_version }}
+      next_version: ${{ steps.versions.outputs.next_version }}
+      tag: ${{ steps.versions.outputs.tag }}
+      author_name: ${{ steps.author.outputs.name }}
+      author_email: ${{ steps.author.outputs.email }}
+
+    steps:
+      - name: Contrôle de la branche
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/${DEV_BRANCH}" ]; then
+            echo "::error::LIVRAISON REFUSÉE : le bouton se lance uniquement depuis ${DEV_BRANCH} (lancé depuis ${REF})."
+            exit 1
+          fi
+          echo "✓ Lancé depuis ${DEV_BRANCH}"
+
+      - name: Contrôle des droits (admin du dépôt)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # triggering_actor : la personne qui a lancé (ou relancé) ce run
+          ACTOR: ${{ github.triggering_actor }}
+        run: |
+          ROLE=$(gh api "repos/${REPO}/collaborators/${ACTOR}/permission" --jq '.role_name')
+          if [ "$ROLE" != "admin" ]; then
+            echo "::error::LIVRAISON REFUSÉE : ${ACTOR} a le rôle '${ROLE}' sur le dépôt ; seuls les admins peuvent livrer."
+            exit 1
+          fi
+          echo "✓ ${ACTOR} est admin du dépôt"
+
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          # Historique complet : le contrôle « main est un ancêtre de develop »
+          # est faux sur un clone superficiel.
+          fetch-depth: 0
+
+      - name: Contrôle du dernier pipeline de develop
+        id: head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "sha=${HEAD_SHA}" >> "$GITHUB_OUTPUT"
+
+          # Dernier pipeline CI lancé par un push sur develop
+          RUN=$(gh api "repos/${REPO}/actions/workflows/${CI_WORKFLOW_FILE}/runs?branch=${DEV_BRANCH}&event=push&per_page=1" \
+            --jq '.workflow_runs[0] | [.head_sha, .status, (.conclusion // "-"), .html_url] | @tsv')
+          IFS=$'\t' read -r RUN_SHA RUN_STATUS RUN_CONCLUSION RUN_URL <<< "$RUN"
+          echo "Dernier pipeline de ${DEV_BRANCH} : ${RUN_URL} (commit ${RUN_SHA}, ${RUN_STATUS}/${RUN_CONCLUSION})"
+
+          if [ "$RUN_SHA" != "$HEAD_SHA" ]; then
+            echo "::error::LIVRAISON REFUSÉE : le dernier pipeline de ${DEV_BRANCH} ne porte pas sur sa tête (${HEAD_SHA}). Attendre le pipeline du dernier commit."
+            exit 1
+          fi
+          if [ "$RUN_STATUS" != "completed" ]; then
+            echo "::error::LIVRAISON REFUSÉE : le pipeline de ${HEAD_SHA} n'est pas terminé (${RUN_STATUS}). Relancer quand il sera vert."
+            exit 1
+          fi
+          if [ "$RUN_CONCLUSION" != "success" ]; then
+            echo "::error::LIVRAISON REFUSÉE : le pipeline de ${HEAD_SHA} n'est pas vert (${RUN_CONCLUSION})."
+            exit 1
+          fi
+          echo "✓ Le dernier pipeline de ${DEV_BRANCH} est vert sur ${HEAD_SHA}"
+          echo "pipeline_url=${RUN_URL}" >> "$GITHUB_OUTPUT"
+
+      # Les commits porteront le nom de la personne qui a cliqué.
+      - name: Auteur des commits
+        id: author
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.triggering_actor }}
+        run: |
+          NAME=$(gh api "users/${ACTOR}" --jq '.name // empty' | tr -d '\r\n')
+          ACTOR_ID=$(gh api "users/${ACTOR}" --jq '.id')
+          echo "name=${NAME:-$ACTOR}" >> "$GITHUB_OUTPUT"
+          echo "email=${ACTOR_ID}+${ACTOR}@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+
+      # Livraison simulée : mêmes contrôles et mêmes calculs que la vraie, sans push.
+      - name: Calcul des versions (à blanc)
+        id: versions
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          NEXT_VERSION: ${{ inputs.next_version }}
+          RELEASE_DRY_RUN: "true"
+          RELEASE_MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+          RELEASE_DEV_BRANCH: ${{ env.DEV_BRANCH }}
+          GIT_AUTHOR_NAME: ${{ steps.author.outputs.name }}
+          GIT_AUTHOR_EMAIL: ${{ steps.author.outputs.email }}
+          GIT_COMMITTER_NAME: ${{ steps.author.outputs.name }}
+          GIT_COMMITTER_EMAIL: ${{ steps.author.outputs.email }}
+        run: bash .github/scripts/release.sh
+
+      - name: Résumé
+        env:
+          RELEASE: ${{ steps.versions.outputs.release_version }}
+          NEXT: ${{ steps.versions.outputs.next_version }}
+          TAG: ${{ steps.versions.outputs.tag }}
+          SHA: ${{ steps.head.outputs.sha }}
+          PIPELINE_URL: ${{ steps.head.outputs.pipeline_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## 🚀 Release du SDK Android"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **${MAIN_BRANCH}** | \`${RELEASE}\` (tag \`${TAG}\` posé à la publication) |"
+            echo "| **${DEV_BRANCH}** | \`${NEXT}\` |"
+            echo "| Commit de départ | \`${SHA}\` |"
+            echo "| Pipeline vert | ${PIPELINE_URL} |"
+            echo ""
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "> **À blanc** : rien n'a été poussé."
+            else
+              echo "> Un admin doit valider le job **Livraison** : bouton **Review deployments** en haut du run."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ============================================
+  # 2. LIVRAISON (après validation d'un admin)
+  # ============================================
+  release:
+    name: Livraison
+    needs: plan
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    # Validation obligatoire par un admin (Required reviewers) ; secret de la
+    # clé de déploiement accessible uniquement ici et depuis develop.
+    environment: release
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout develop (clé de déploiement)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          fetch-depth: 0
+          # Fetch et push en SSH avec la clé de déploiement
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      # Ce sont les versions VALIDÉES (calculées par le job précédent) qui sont
+      # livrées. Le script revérifie tout : si develop a avancé pendant
+      # l'attente de validation, il refuse.
+      - name: Livraison
+        id: release
+        env:
+          RELEASE_VERSION: ${{ needs.plan.outputs.release_version }}
+          NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
+          RELEASE_DRY_RUN: "false"
+          RELEASE_MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+          RELEASE_DEV_BRANCH: ${{ env.DEV_BRANCH }}
+          GIT_AUTHOR_NAME: ${{ needs.plan.outputs.author_name }}
+          GIT_AUTHOR_EMAIL: ${{ needs.plan.outputs.author_email }}
+          GIT_COMMITTER_NAME: ${{ needs.plan.outputs.author_name }}
+          GIT_COMMITTER_EMAIL: ${{ needs.plan.outputs.author_email }}
+        run: bash .github/scripts/release.sh
+
+      - name: Résumé
+        env:
+          RELEASE: ${{ steps.release.outputs.release_version }}
+          NEXT: ${{ steps.release.outputs.next_version }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          {
+            echo "## ✅ Livraison poussée"
+            echo ""
+            echo "- **${MAIN_BRANCH}** = \`${RELEASE}\` : le pipeline de ${MAIN_BRANCH} publie sur Maven Central puis pose le tag \`v${RELEASE}\`."
+            echo "- **${DEV_BRANCH}** = \`${NEXT}\`"
+            echo ""
+            echo "Suivre la publication : ${REPO_URL}/actions/workflows/${CI_WORKFLOW_FILE}?query=branch%3A${MAIN_BRANCH}"
+          } >> "$GITHUB_STEP_SUMMARY"

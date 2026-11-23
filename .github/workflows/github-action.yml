@@ -3,11 +3,11 @@ name: Monext Online Android SDK CI/CD Pipeline
 # DÉCLENCHEURS - Quand ce pipeline doit s'exécuter
 on:
   # Se déclenche lors d'un push sur les branches main ou develop
+  # La livraison se fait par le bouton « Release SDK » (release.yml), qui pousse
+  # sur main : c'est ce push qui lance la publication. Les tags v<version> sont
+  # posés par la publication elle-même et ne déclenchent pas de pipeline.
   push:
     branches: [ main, develop ]
-    # Se déclenche aussi lors de la création d'un tag commençant par 'v' (ex: v1.0.0)
-    tags:
-      - 'v*'
   # Se déclenche lors de l'ouverture ou mise à jour d'une Pull Request
   pull_request:
     branches: [ develop ]
@@ -325,7 +325,11 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
-          tag_name: ${{ steps.version.outputs.VERSION_NAME }}
+          # Tag v<version> posé sur le commit livré (et non sur la branche par
+          # défaut develop) : c'est le seul endroit où les tags sont créés.
+          # Le bouton « Release SDK » (release.yml) vérifie qu'il n'existe pas déjà.
+          tag_name: v${{ steps.version.outputs.VERSION_NAME }}
+          target_commitish: ${{ github.sha }}
           name: Monext Online Android SDK Release v${{ steps.version.outputs.VERSION_NAME }}
           #  Permet de mettre à jour une release existante si elle existe déjà.
           fail_on_unmatched_files: false
@@ -587,8 +591,7 @@ jobs:
         if: |
           (github.ref == 'refs/heads/main' ||
            github.ref == 'refs/heads/master' ||
-           startsWith(github.ref, 'refs/heads/release/') ||
-           startsWith(github.ref, 'refs/tags/v'))
+           startsWith(github.ref, 'refs/heads/release/'))
         run: |
           TEAMS_WEBHOOK_URL="${{ secrets.TEAMS_WEBHOOK_URL_SDK_MOBILE }}"
           SHOULD_SEND="yes"
