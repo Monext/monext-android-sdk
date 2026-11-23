@@ -12,6 +12,11 @@ on:
   pull_request:
     branches: [ develop ]
 
+# PERMISSIONS DU GITHUB_TOKEN - lecture seule par défaut (principe du moindre privilège).
+# Les jobs qui ont besoin de plus de droits les déclarent explicitement.
+permissions:
+  contents: read
+
 # VARIABLES GLOBALES - Utilisées dans tous les jobs
 env:
   ANDROID_COMPILE_SDK: "34"
@@ -132,6 +137,9 @@ jobs:
     runs-on: ubuntu-latest
     # Ne s'exécute qu'après le succès des tests
     needs: test
+    permissions:
+      contents: read
+      pull-requests: read  # Lecture des infos de PR pour l'analyse Sonar
 
     steps:
       - name: Checkout code
@@ -199,6 +207,8 @@ jobs:
     name: Build and Publish SDK
     runs-on: ubuntu-latest
     needs: [test, sonarcloud]
+    permissions:
+      contents: write  # Création de la GitHub Release (softprops/action-gh-release)
     if: |
       github.ref == 'refs/heads/main' ||
       github.ref == 'refs/heads/master' ||
@@ -386,19 +396,29 @@ jobs:
 
       - name: Get commit information
         id: commit_info
+        # Sécurité : les données contrôlables par un utilisateur (message de commit, titre de PR...)
+        # passent par des variables d'environnement et ne sont JAMAIS interpolées via ${{ }}
+        # dans le script, pour éviter toute injection de commande.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          HEAD_COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          ACTOR: ${{ github.actor }}
         run: |
           echo "🔍 Récupération des informations de commit..."
 
           # Déterminer la source du message
-          if [ "${{ github.event_name }}" == "push" ]; then
+          if [ "$EVENT_NAME" == "push" ]; then
             # Événement push : utiliser github.event
-            COMMIT_MSG="${{ github.event.head_commit.message }}"
-            COMMIT_AUTHOR="${{ github.event.head_commit.author.name }}"
+            COMMIT_MSG="$HEAD_COMMIT_MESSAGE"
+            COMMIT_AUTHOR="$HEAD_COMMIT_AUTHOR"
             echo "Source: GitHub event (push)"
-          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+          elif [ "$EVENT_NAME" == "pull_request" ]; then
             # Pull request : utiliser le titre de la PR
-            COMMIT_MSG="PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-            COMMIT_AUTHOR="${{ github.actor }}"
+            COMMIT_MSG="PR #${PR_NUMBER}: ${PR_TITLE}"
+            COMMIT_AUTHOR="$ACTOR"
             echo "Source: Pull Request"
           else
             # Autres cas : utiliser git log
@@ -410,22 +430,25 @@ jobs:
           # Si toujours vide, message par défaut
           if [ -z "$COMMIT_MSG" ]; then
             COMMIT_MSG="Build automatique"
-            COMMIT_AUTHOR="${{ github.actor }}"
+            COMMIT_AUTHOR="$ACTOR"
           fi
 
           # Récupérer les 5 derniers commits pour le changelog
           RECENT_COMMITS=$(git log -5 --pretty=format:"• %s" --no-merges)
 
+          # Délimiteur aléatoire : un message contenant une ligne "EOF" ne peut pas injecter d'autres outputs
+          DELIM="EOF_$(openssl rand -hex 16)"
+
           # Sauvegarder dans les outputs
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
-
-          echo "recent_commits<<EOF" >> $GITHUB_OUTPUT
-          echo "$RECENT_COMMITS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "message<<${DELIM}"
+            echo "$COMMIT_MSG"
+            echo "${DELIM}"
+            echo "author=${COMMIT_AUTHOR//$'\n'/ }"
+            echo "recent_commits<<${DELIM}"
+            echo "$RECENT_COMMITS"
+            echo "${DELIM}"
+          } >> "$GITHUB_OUTPUT"
 
           echo "✓ Commit message: ${COMMIT_MSG}"
           echo "✓ Author: ${COMMIT_AUTHOR}"
@@ -434,6 +457,9 @@ jobs:
       # PRÉPARATION de l'APK + release note
       # ============================================
       - name: Prepare artifacts
+        env:
+          LAST_COMMIT_MESSAGE: ${{ steps.commit_info.outputs.message }}
+          RECENT_COMMITS: ${{ steps.commit_info.outputs.recent_commits }}
         run: |
           mkdir -p qa-release
 
@@ -461,10 +487,10 @@ jobs:
 
           ══════════════════════════════════════════════════════
           📝 Dernier changement:
-          ${{ steps.commit_info.outputs.message }}
+          ${LAST_COMMIT_MESSAGE}
 
           📋 Changements récents:
-          ${{ steps.commit_info.outputs.recent_commits }}
+          ${RECENT_COMMITS}
           ══════════════════════════════════════════════════════
           EOF
 
