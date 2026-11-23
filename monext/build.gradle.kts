@@ -316,6 +316,9 @@ jreleaser {
         active.set(org.jreleaser.model.Active.ALWAYS)
         armored.set(true)
         verify.set(true)
+        // Les variables JRELEASER_GPG_* contiennent des CHEMINS de fichiers (cf. workflow),
+        // pas le contenu des clés : sans le mode FILE, JReleaser (mode MEMORY par défaut) ne trouve aucune clé.
+        mode.set(org.jreleaser.model.Signing.Mode.FILE)
         // Configuration des clés GPG
         publicKey.set(System.getenv("JRELEASER_GPG_PUBLIC_KEY") ?: "")
         secretKey.set(System.getenv("JRELEASER_GPG_SECRET_KEY") ?: "")
